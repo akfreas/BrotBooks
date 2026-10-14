@@ -1,0 +1,15 @@
+// iOS UI tests for BrotBooks (iPhone and iPad simulators). Signed ad hoc like the Testing configuration.
+PRODUCT_BUNDLE_IDENTIFIER = $(SL_BUNDLE_ID).UITests
+SL_BUNDLE_ID = me.freas.BrotBooks
+PRODUCT_NAME = BrotBooksUITests
+GENERATE_INFOPLIST_FILE = YES
+SDKROOT = iphoneos
+SUPPORTED_PLATFORMS = iphoneos iphonesimulator
+TARGETED_DEVICE_FAMILY = 1,2
+IPHONEOS_DEPLOYMENT_TARGET = 27.0
+SWIFT_VERSION = 6.0
+TEST_TARGET_NAME = BrotBooks
+CODE_SIGN_STYLE = Manual
+CODE_SIGN_IDENTITY = -
+DEVELOPMENT_TEAM =
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks @loader_path/Frameworks

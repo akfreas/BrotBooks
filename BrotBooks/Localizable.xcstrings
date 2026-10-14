@@ -1,0 +1,759 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@ · %@" : {
+
+    },
+    "%@ %@" : {
+
+    },
+    "%@ not counted" : {
+
+    },
+    "%lld of %lld" : {
+
+    },
+    "%lld of %lld files" : {
+
+    },
+    "^[%lld draft](inflect: true) not approved" : {
+
+    },
+    "^[%lld draft](inflect: true) ready to review" : {
+
+    },
+    "^[%lld draft](inflect: true) to review" : {
+
+    },
+    "^[%lld record](inflect: true)" : {
+
+    },
+    "^[%lld row](inflect: true)" : {
+
+    },
+    "Active records" : {
+
+    },
+    "Add" : {
+
+    },
+    "Add a record or import a Sorted export." : {
+
+    },
+    "Add Date" : {
+
+    },
+    "Add VAT Rate" : {
+
+    },
+    "Already imported as %@" : {
+
+    },
+    "Amount" : {
+
+    },
+    "Apple Intelligence declined to read this document." : {
+
+    },
+    "Apple Intelligence is turned off in Settings." : {
+
+    },
+    "Approve" : {
+
+    },
+    "Approve & Next" : {
+
+    },
+    "Approve Selected" : {
+
+    },
+    "Approved" : {
+
+    },
+    "Attach PDF" : {
+
+    },
+    "Attach PDF…" : {
+
+    },
+    "Automatic reading isn't available. Fill it in by hand." : {
+
+    },
+    "Calculated" : {
+
+    },
+    "Cancel" : {
+
+    },
+    "Cancelled" : {
+
+    },
+    "Cancelled before it was read. Fill it in by hand." : {
+
+    },
+    "Category" : {
+      "extractionState" : "manual"
+    },
+    "Check the date – it looks wrong" : {
+
+    },
+    "Check the details and fill in what's missing." : {
+
+    },
+    "Check this value – it may have been misread" : {
+
+    },
+    "Checking…" : {
+
+    },
+    "Choose PDF…" : {
+
+    },
+    "Choose Photos…" : {
+
+    },
+    "Clear" : {
+
+    },
+    "Client is a private person" : {
+      "extractionState" : "manual"
+    },
+    "Client region" : {
+      "extractionState" : "manual"
+    },
+    "Client VAT number" : {
+      "extractionState" : "manual"
+    },
+    "Container" : {
+
+    },
+    "Conversion rate to EUR" : {
+      "extractionState" : "manual"
+    },
+    "Couldn't open your records" : {
+
+    },
+    "Couldn't read this invoice. Fill it in by hand." : {
+
+    },
+    "Cumulative, net of expenses" : {
+
+    },
+    "Currency" : {
+      "extractionState" : "manual"
+    },
+    "Dashboard" : {
+
+    },
+    "Date" : {
+      "extractionState" : "manual"
+    },
+    "Deductible amount (EUR)" : {
+      "extractionState" : "manual"
+    },
+    "Description" : {
+      "extractionState" : "manual"
+    },
+    "Discard Changes" : {
+
+    },
+    "Discard your changes?" : {
+
+    },
+    "Document" : {
+
+    },
+    "Document preview" : {
+
+    },
+    "Document unavailable" : {
+
+    },
+    "Documents" : {
+
+    },
+    "Documents copied" : {
+
+    },
+    "Documents to copy" : {
+
+    },
+    "Done" : {
+
+    },
+    "Down %@" : {
+
+    },
+    "Downloading from iCloud…" : {
+
+    },
+    "Draft" : {
+
+    },
+    "Draft saved, waiting to extract" : {
+
+    },
+    "Drafts" : {
+
+    },
+    "Drafts are not counted in totals until you approve them" : {
+
+    },
+    "Drafts will be created without auto-fill. %@" : {
+
+    },
+    "Drop a PDF or photo here or choose one to attach it to this record." : {
+
+    },
+    "Enter the conversion rate to EUR" : {
+
+    },
+    "Enter the gross amount" : {
+
+    },
+    "Enter the invoice date" : {
+
+    },
+    "Estimate" : {
+
+    },
+    "EUR gross, VAT and net are calculated when you save." : {
+
+    },
+    "EUR gross, VAT and net are recalculated when you change the amount, currency or VAT." : {
+
+    },
+    "EUR gross, VAT and net are recalculated when you change the amount, currency or VAT. Imported from Sorted: a newer export that changes this record overwrites local edits." : {
+
+    },
+    "European Union" : {
+      "extractionState" : "manual"
+    },
+    "Expense" : {
+
+    },
+    "Expenses" : {
+
+    },
+    "Expenses · %@" : {
+
+    },
+    "Expenses so far · %@" : {
+
+    },
+    "Extracting details…" : {
+
+    },
+    "Failed: %@" : {
+
+    },
+    "Find" : {
+
+    },
+    "For the full year, after VAT already paid" : {
+
+    },
+    "Foreign currency – enter the rate" : {
+
+    },
+    "German taxes for a single filer; the invoice date decides which year a record counts in." : {
+      "extractionState" : "manual"
+    },
+    "Germany" : {
+      "extractionState" : "manual"
+    },
+    "Gross (EUR)" : {
+
+    },
+    "Gross amount" : {
+      "extractionState" : "manual"
+    },
+    "Hidden" : {
+
+    },
+    "Hide Files" : {
+
+    },
+    "iCloud" : {
+
+    },
+    "iCloud (CloudKit private database)" : {
+
+    },
+    "iCloud isn't available for this app right now. Records stay on this device until it is." : {
+
+    },
+    "Import" : {
+
+    },
+    "Import Anyway" : {
+
+    },
+    "Import Invoices…" : {
+
+    },
+    "Import progress" : {
+
+    },
+    "Import Sorted Export" : {
+
+    },
+    "Import Sorted Export…" : {
+
+    },
+    "Import your Sorted export to bring over every income and expense record with its documents, or start fresh by adding a record." : {
+
+    },
+    "Imported %@." : {
+
+    },
+    "Importing %lld of %lld…" : {
+
+    },
+    "Importing invoices" : {
+
+    },
+    "Importing is how you move from Sorted: records are matched by their Sorted reference, so importing a newer export updates them in place." : {
+
+    },
+    "Importing records and documents…" : {
+
+    },
+    "in %@" : {
+
+    },
+    "In the record currency" : {
+      "extractionState" : "manual"
+    },
+    "Income" : {
+
+    },
+    "Income · %@" : {
+
+    },
+    "Income so far · %@" : {
+
+    },
+    "Income tax" : {
+
+    },
+    "Invoice" : {
+
+    },
+    "Keep Editing" : {
+
+    },
+    "Keep this draft for later and show the next one" : {
+
+    },
+    "Loading document…" : {
+
+    },
+    "Local storage was requested at launch, so nothing syncs with iCloud." : {
+
+    },
+    "Looks complete" : {
+
+    },
+    "Mark as Paid" : {
+
+    },
+    "Marked as paid" : {
+
+    },
+    "Missing documents" : {
+
+    },
+    "Month" : {
+
+    },
+    "More" : {
+
+    },
+    "Needs attention: %@" : {
+
+    },
+    "Net" : {
+
+    },
+    "Net, excl. VAT · %@ gross" : {
+
+    },
+    "New" : {
+
+    },
+    "New Expense" : {
+
+    },
+    "New Income" : {
+
+    },
+    "Next" : {
+
+    },
+    "No document" : {
+
+    },
+    "No expenses in %@" : {
+
+    },
+    "No income in %@" : {
+
+    },
+    "No new drafts" : {
+
+    },
+    "No other income, deductions, tax prepayments, trade tax or church tax; depreciation is not modeled." : {
+      "extractionState" : "manual"
+    },
+    "No VAT on this record." : {
+
+    },
+    "Not counted in totals" : {
+
+    },
+    "Not enough data for a chart yet." : {
+
+    },
+    "Not signed in" : {
+
+    },
+    "Nothing has been changed yet. This is what importing %@ will do:" : {
+
+    },
+    "Nothing matches your search." : {
+
+    },
+    "Nothing to compare %@" : {
+
+    },
+    "Off (local store requested)" : {
+
+    },
+    "OK" : {
+
+    },
+    "On income and expenses so far this year, after VAT already paid" : {
+
+    },
+    "Only PDFs and images can be attached." : {
+
+    },
+    "Open" : {
+
+    },
+    "Opening your books…" : {
+
+    },
+    "Opens the expense" : {
+
+    },
+    "Opens the invoice" : {
+
+    },
+    "Outside of the European Union" : {
+      "extractionState" : "manual"
+    },
+    "Paid" : {
+
+    },
+    "Paid on %@" : {
+
+    },
+    "Payment date" : {
+      "extractionState" : "manual"
+    },
+    "Payment status" : {
+      "extractionState" : "manual"
+    },
+    "PDFs are kept in the app's own storage on this device." : {
+
+    },
+    "PDFs are kept in the app's own storage on this Mac." : {
+
+    },
+    "Photo %lld" : {
+
+    },
+    "Previous" : {
+
+    },
+    "Profit" : {
+
+    },
+    "Profit · %@" : {
+
+    },
+    "Queued" : {
+
+    },
+    "Rate" : {
+
+    },
+    "Reading %@…" : {
+
+    },
+    "Reading images isn't supported on this device." : {
+
+    },
+    "Reading the invoice…" : {
+
+    },
+    "Reading…" : {
+
+    },
+    "Ready" : {
+
+    },
+    "Record type" : {
+
+    },
+    "Records" : {
+
+    },
+    "Records you add or import appear here." : {
+
+    },
+    "Refresh" : {
+
+    },
+    "Remove" : {
+
+    },
+    "Remove Record" : {
+
+    },
+    "Remove VAT rate" : {
+
+    },
+    "Removed" : {
+
+    },
+    "Removed · %lld" : {
+
+    },
+    "Removed (no longer in Sorted)" : {
+
+    },
+    "Replace PDF…" : {
+
+    },
+    "Required for non-EUR" : {
+      "extractionState" : "manual"
+    },
+    "Restore" : {
+
+    },
+    "Restore Record" : {
+
+    },
+    "Reveal Documents in Finder" : {
+
+    },
+    "Review Drafts" : {
+
+    },
+    "Sale type" : {
+      "extractionState" : "manual"
+    },
+    "same period %@" : {
+
+    },
+    "Save" : {
+
+    },
+    "Save your changes and count this expense in your totals" : {
+
+    },
+    "Save your changes, count this expense in your totals and show the next draft" : {
+
+    },
+    "Scan %@" : {
+
+    },
+    "Scan Documents…" : {
+
+    },
+    "Search descriptions" : {
+
+    },
+    "Service" : {
+      "extractionState" : "manual"
+    },
+    "Set payment status to Paid with today's date" : {
+
+    },
+    "Settings" : {
+
+    },
+    "Share PDF" : {
+
+    },
+    "Show Files" : {
+
+    },
+    "Show in Finder" : {
+
+    },
+    "Shown" : {
+
+    },
+    "Shows or hides removed records, which you can restore" : {
+
+    },
+    "Sign in to iCloud in System Settings to sync records and documents across your devices." : {
+
+    },
+    "Skip" : {
+
+    },
+    "Solidarity surcharge" : {
+
+    },
+    "Something went wrong" : {
+
+    },
+    "Storage" : {
+
+    },
+    "Stored on this device only" : {
+
+    },
+    "Suggestions for %@" : {
+
+    },
+    "Supplier region" : {
+      "extractionState" : "manual"
+    },
+    "Syncing" : {
+
+    },
+    "Tax reports copied" : {
+
+    },
+    "Tax reports to copy" : {
+
+    },
+    "Taxable profit %@ · §32a EStG %@ tariff" : {
+
+    },
+    "Taxable profit = net income − deductible net expenses; VAT payments and refunds are excluded." : {
+      "extractionState" : "manual"
+    },
+    "Taxes to be paid · %@" : {
+
+    },
+    "The app's iCloud container isn't available." : {
+
+    },
+    "The Apple Intelligence model is still downloading." : {
+
+    },
+    "The Apple Intelligence model isn't available on this device right now." : {
+
+    },
+    "The details couldn't be read." : {
+
+    },
+    "The document is too long to read automatically." : {
+
+    },
+    "The invoice's language isn't supported." : {
+
+    },
+    "The PDF couldn't be read. It may still be uploading from another device." : {
+
+    },
+    "The photo couldn't be loaded." : {
+
+    },
+    "They are still selected. Open each one to fill in what's missing." : {
+
+    },
+    "This device doesn't support Apple Intelligence." : {
+
+    },
+    "This device only" : {
+
+    },
+    "This export can't be imported" : {
+
+    },
+    "This file isn't a PDF or an image that can be read." : {
+
+    },
+    "Unavailable" : {
+
+    },
+    "Uncategorized" : {
+
+    },
+    "Unchanged" : {
+
+    },
+    "Unpaid" : {
+
+    },
+    "Untitled" : {
+
+    },
+    "Up %@" : {
+
+    },
+    "Updated" : {
+
+    },
+    "VAT" : {
+
+    },
+    "VAT already paid" : {
+
+    },
+    "VAT amount in euros" : {
+
+    },
+    "VAT credit" : {
+
+    },
+    "VAT didn't add up to the total" : {
+
+    },
+    "VAT doesn't add up to the gross amount" : {
+
+    },
+    "VAT outstanding" : {
+
+    },
+    "VAT outstanding subtracts VAT payments to the tax office and adds refunds recorded in the same period." : {
+      "extractionState" : "manual"
+    },
+    "VAT owed" : {
+
+    },
+    "VAT rate in percent" : {
+
+    },
+    "VAT rates must be between 0 and 100, and a zero rate can't have an amount" : {
+
+    },
+    "View Document" : {
+
+    },
+    "Welcome to BrotBooks" : {
+
+    },
+    "Year" : {
+
+    },
+    "Your PDFs appear in Finder under iCloud Drive › BrotBooks." : {
+
+    },
+    "Your PDFs appear in the Files app under iCloud Drive › BrotBooks." : {
+
+    },
+    "Zero" : {
+
+    }
+  },
+  "version" : "1.0"
+}

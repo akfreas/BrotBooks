@@ -1,0 +1,103 @@
+# XcodeGen spec for BrotBooks. Generate the project with `xcodegen generate` (or scripts/build.sh,
+# which does it for you); BrotBooks.xcodeproj is a build artifact and is not committed.
+#
+# Identity, signing, entitlements and Info.plist keys live in Config/BrotBooks.xcconfig, so changing
+# the team or bundle id never needs a regenerate. Set them there, not in Xcode's Signing UI: edits
+# made in Xcode are lost on the next generate.
+name: BrotBooks
+
+options:
+  minimumXcodeGenVersion: 2.45.0
+  projectFormat: xcode16_0
+  developmentLanguage: en
+  createIntermediateGroups: true
+  # Xcode's project-level Debug/Release defaults only; per-target presets would override the xcconfig.
+  settingPresets: project
+  deploymentTarget:
+    iOS: "27.0"
+    macOS: "27.0"
+
+# Project-level defaults from Xcode's app template that XcodeGen's presets don't set.
+# Testing is Debug code signed ad hoc without iCloud (Config/BrotBooks-Testing.xcconfig); the test actions use it.
+configs:
+  Debug: debug
+  Testing: debug
+  Release: release
+
+settings:
+  base:
+    ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+  configs:
+    Release:
+      VALIDATE_PRODUCT: YES
+
+packages:
+  BrotBooksKit:
+    path: BrotBooksKit
+
+targets:
+  BrotBooks:
+    type: application
+    # One native SwiftUI target for Mac, iPhone and iPad (no Mac Catalyst).
+    supportedDestinations: [iOS, macOS]
+    configFiles:
+      Debug: Config/BrotBooks.xcconfig
+      Testing: Config/BrotBooks-Testing.xcconfig
+      Release: Config/BrotBooks.xcconfig
+    sources:
+      # Xcode 16 synchronized folder: new Swift files and resources need no regenerate.
+      - path: BrotBooks
+        type: syncedFolder
+    dependencies:
+      - package: BrotBooksKit
+
+  BrotBooksUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    configFiles:
+      Debug: Config/BrotBooksUITests.xcconfig
+      Testing: Config/BrotBooksUITests.xcconfig
+      Release: Config/BrotBooksUITests.xcconfig
+    sources:
+      - path: BrotBooksUITests
+        excludes:
+          - "**/*.py"
+          - "**/.gitignore"
+    dependencies:
+      - target: BrotBooks
+
+# Shown in the navigator only; not part of the target.
+fileGroups:
+  - Config
+  - project.yml
+
+schemes:
+  BrotBooks:
+    build:
+      targets:
+        BrotBooks: all
+    run:
+      config: Debug
+    test:
+      config: Testing
+      targets:
+        - package: BrotBooksKit/BrotBooksKitTests
+        - BrotBooksUITests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
+  # iOS UI tests only (run on an iPhone or iPad simulator).
+  BrotBooksUITests:
+    build:
+      targets:
+        BrotBooks: [test]
+        BrotBooksUITests: [test]
+    test:
+      config: Testing
+      targets:
+        - BrotBooksUITests

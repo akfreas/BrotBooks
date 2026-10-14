@@ -1,0 +1,52 @@
+// Identity and signing for the BrotBooks multiplatform app. Change these three to ship under another team.
+SL_BUNDLE_ID = me.freas.BrotBooks
+SL_ICLOUD_CONTAINER = iCloud.me.freas.BrotBooks
+SL_TEAM = KGJCC745S9
+
+PRODUCT_BUNDLE_IDENTIFIER = $(SL_BUNDLE_ID)
+DEVELOPMENT_TEAM = $(SL_TEAM)
+PRODUCT_NAME = BrotBooks
+MARKETING_VERSION = 1.0
+CURRENT_PROJECT_VERSION = 1
+
+// One native SwiftUI target for Mac, iPhone and iPad (no Mac Catalyst).
+SDKROOT = auto
+SUPPORTED_PLATFORMS = iphoneos iphonesimulator macosx
+SUPPORTS_MACCATALYST = NO
+SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO
+SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO
+TARGETED_DEVICE_FAMILY = 1,2
+IPHONEOS_DEPLOYMENT_TARGET = 27.0
+MACOSX_DEPLOYMENT_TARGET = 27.0
+SWIFT_VERSION = 6.0
+
+// Signing: automatic, with iCloud (CloudKit + iCloud Drive) entitlements. macOS and iOS spell the
+// push-environment key differently, hence one entitlements file per platform.
+CODE_SIGN_STYLE = Automatic
+CODE_SIGN_ENTITLEMENTS[sdk=macosx*] = Config/BrotBooks-macOS.entitlements
+CODE_SIGN_ENTITLEMENTS[sdk=iphone*] = Config/BrotBooks-iOS.entitlements
+ENABLE_APP_SANDBOX = YES
+ENABLE_USER_SELECTED_FILES = readonly
+ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES
+ENABLE_HARDENED_RUNTIME[sdk=macosx*] = YES
+
+// Info.plist: generated keys plus Config/Info.plist (iCloud Drive container, background push, invoice import task).
+GENERATE_INFOPLIST_FILE = YES
+INFOPLIST_FILE = Config/Info.plist
+INFOPLIST_KEY_CFBundleDisplayName = BrotBooks
+INFOPLIST_KEY_LSApplicationCategoryType = public.app-category.finance
+INFOPLIST_KEY_NSHumanReadableCopyright = © 2026 Alexander Freas
+INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES
+INFOPLIST_KEY_UILaunchScreen_Generation = YES
+INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO
+INFOPLIST_KEY_NSCameraUsageDescription = BrotBooks uses the camera to scan invoices and receipts.
+
+ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon
+ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor
+ENABLE_PREVIEWS = YES
+SWIFT_EMIT_LOC_STRINGS = YES
+LOCALIZATION_PREFERS_STRING_CATALOGS = YES
+LD_RUNPATH_SEARCH_PATHS[sdk=macosx*] = $(inherited) @executable_path/../Frameworks
+LD_RUNPATH_SEARCH_PATHS[sdk=iphone*] = $(inherited) @executable_path/Frameworks
