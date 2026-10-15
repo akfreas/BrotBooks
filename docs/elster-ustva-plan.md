@@ -334,4 +334,20 @@ Known facts carried forward:
     - Ad-hoc builds and `swift test` fall back to the login keychain. The data-protection keychain in the signed build is not yet verified.
     - Commit e4bcee6 alone doesn't build the app (fixed in fd6e161).
     - 2025 has no settings row.
-- [ ] U6: M4b, ZM (ZMDO) XML, sending, UI, consistency check
+- [x] U6: M4b, committed as 63a4428, 1c55d08, 0d97d00. BrotBooksKit 211 tests and EricKit 47 tests green; builds succeed.
+  - **Live ZMDO validation:** 0 errors and 0 hints for monthly, quarterly, a credit note and a correction (meldeart 11).
+  - **ZM rules:**
+    - Lines always use the record `date` (§18a(8)).
+    - Empty periods show "Nothing to report"; a nil report is not allowed.
+    - Corrections send only the changed lines, with 0 for cancelled ones.
+    - Consistency with Kz21/Kz41 is checked, with a rounding tolerance.
+  - **Open:**
+    - `anzeige` is always false. A monthly ZM below the threshold may need the §18a(1) Anzeige.
+    - A ZM marked as filed elsewhere can't be corrected in-app.
+- **Next (M5, needs the user):**
+  - Hersteller-ID activation.
+  - Live test send (`EricSendLiveTests`).
+  - Signed-build Keychain check.
+  - Confirm the VAT treatments of existing records.
+  - Mark past periods as filed elsewhere.
+  - First production filing, cross-checked against the current method.
