@@ -5,6 +5,7 @@ import Observation
 import os
 import SwiftData
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// The synced tax profile (`TaxProfile`) being edited in Settings. Every change is saved right away.
 @MainActor
@@ -91,6 +92,7 @@ private struct ElsterSettingsForm: View {
     var body: some View {
         Form {
             EricSection()
+            CertificateSection()
             SteuernummerSection(model: model)
             DetailsSection(model: model)
             FilingSettingsSection(model: model)
@@ -151,6 +153,165 @@ private struct EricSection: View {
             case 1: return String(localized: "ERiC \(version), UStVA \(years[0]) plugin available")
             default: return String(localized: "ERiC \(version), UStVA \(years.formatted(.list(type: .and))) plugins available")
             }
+        }
+    }
+}
+
+// MARK: - Certificate
+
+/// The ELSTER certificate (.pfx/.p12) and its PIN, kept in this Mac's Keychain. Importing opens the certificate
+/// with the PIN and reads its properties before anything is stored.
+private struct CertificateSection: View {
+    @State private var credentials = ElsterCredentials.shared
+    @State private var importing = false
+    /// A picked certificate waiting for its PIN.
+    @State private var pending: (name: String, data: Data)?
+    @State private var pin = ""
+    @State private var verifying = false
+    @State private var message: String?
+    @State private var confirmingRemove = false
+
+    static let types: [UTType] = [.pkcs12] + [UTType(filenameExtension: "pfx"), UTType(filenameExtension: "p12")]
+        .compactMap { $0 }
+
+    var body: some View {
+        Section {
+            if let info = credentials.info {
+                CertificateInfoRows(info: info)
+            } else if credentials.hasCertificate {
+                LabeledContent("Certificate") { Text("Stored in the Keychain") }
+            } else if credentials.loaded {
+                Text("No certificate yet. Import the .pfx file you use for Mein ELSTER.")
+                    .foregroundStyle(.secondary)
+            }
+            if let error = credentials.infoError, pending == nil {
+                Label(ElsterCredentials.message(error), systemImage: "exclamationmark.triangle")
+                    .foregroundStyle(Theme.bad)
+            }
+            if let pending {
+                LabeledContent("File") { Text(verbatim: pending.name) }
+            }
+            if pending != nil || (credentials.hasCertificate && !credentials.hasPIN) {
+                LabeledContent("PIN") {
+                    HStack {
+                        SecureField("PIN", text: $pin)
+                            .labelsHidden()
+                            .textContentType(.password)
+                            .onSubmit(verify)
+                            .accessibilityIdentifier("settings.elster.pin")
+                        Button(pending == nil ? "Save PIN" : "Verify and Save", action: verify)
+                            .disabled(pin.isEmpty || verifying)
+                            .accessibilityIdentifier("settings.elster.verifyCertificate")
+                    }
+                }
+            }
+            if let message {
+                Label(message, systemImage: "exclamationmark.triangle")
+                    .foregroundStyle(Theme.bad)
+                    .accessibilityIdentifier("settings.elster.certificateError")
+            }
+            HStack {
+                Button(credentials.hasCertificate ? "Replace…" : "Import…") { importing = true }
+                    .accessibilityIdentifier("settings.elster.importCertificate")
+                if pending != nil {
+                    Button("Cancel") {
+                        pending = nil
+                        pin = ""
+                        message = nil
+                    }
+                }
+                Spacer()
+                if credentials.hasCertificate {
+                    Button("Remove", role: .destructive) { confirmingRemove = true }
+                        .accessibilityIdentifier("settings.elster.removeCertificate")
+                }
+                if verifying { ProgressView().controlSize(.small) }
+            }
+        } header: {
+            Text("Certificate")
+        } footer: {
+            Text("The certificate and its PIN are kept in this Mac's Keychain only; they don't sync. Every send still asks for confirmation.")
+        }
+        .fileImporter(isPresented: $importing, allowedContentTypes: Self.types) { result in
+            pick(result)
+        }
+        .confirmationDialog("Remove the certificate and its PIN from this Mac?", isPresented: $confirmingRemove) {
+            Button("Remove", role: .destructive) {
+                do {
+                    try credentials.remove()
+                    message = nil
+                } catch {
+                    message = error.localizedDescription
+                }
+            }
+        }
+        .task { await credentials.load() }
+    }
+
+    private func pick(_ result: Result<URL, any Error>) {
+        message = nil
+        do {
+            let url = try result.get()
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            pending = (url.lastPathComponent, try Data(contentsOf: url))
+            pin = ""
+        } catch {
+            message = error.localizedDescription
+        }
+    }
+
+    private func verify() {
+        guard !pin.isEmpty, !verifying else { return }
+        verifying = true
+        Task {
+            defer { verifying = false }
+            do {
+                if let pending {
+                    _ = try await credentials.importCertificate(pending.data, pin: pin)
+                } else {
+                    try await credentials.savePIN(pin)
+                }
+                pending = nil
+                pin = ""
+                message = nil
+            } catch let error as ElsterCredentials.CredentialError {
+                message = ElsterCredentials.message(error)
+            } catch {
+                message = error.localizedDescription
+            }
+        }
+    }
+}
+
+/// Holder, issuer, validity and the expiry warning of a certificate.
+struct CertificateInfoRows: View {
+    let info: EricCertificateInfo
+
+    var body: some View {
+        LabeledContent("Holder") {
+            Text(verbatim: info.holder ?? "–").textSelection(.enabled)
+                .accessibilityIdentifier("settings.elster.certificateHolder")
+        }
+        LabeledContent("Issuer") { Text(verbatim: info.issuerName ?? "–").textSelection(.enabled) }
+        LabeledContent("Valid") {
+            Text(verbatim: [info.validFrom, info.validUntil]
+                .map { $0?.formatted(date: .long, time: .omitted) ?? "?" }.joined(separator: " – "))
+        }
+        if info.isTestCertificate {
+            Label("ELSTER test certificate", systemImage: "testtube.2").foregroundStyle(Theme.accent)
+        }
+        switch info.expiryWarning() {
+        case .expired:
+            Label("The certificate has expired. Renew it in Mein ELSTER and import the new file.",
+                  systemImage: "exclamationmark.triangle.fill")
+                .foregroundStyle(Theme.bad)
+        case .expiresSoon(let days):
+            Label("The certificate expires in ^[\(days) day](inflect: true). Renew it in Mein ELSTER.",
+                  systemImage: "exclamationmark.triangle.fill")
+                .foregroundStyle(Theme.amber)
+        case nil:
+            EmptyView()
         }
     }
 }

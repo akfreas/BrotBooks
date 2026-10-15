@@ -17,6 +17,10 @@ import BrotBooksKit
 ///   in for the Import Invoices… file picker.
 /// - `-uiTestingExtractor stub`: invoice extraction returns the canned results in `stubExtractions`, keyed by
 ///   filename, instead of using the on-device model (which the Simulator can't run).
+/// - `-elsterTransport stub` (macOS): sending a VAT return never contacts ELSTER and needs no certificate; it
+///   answers with the canned result of `-elsterStubScenario success|rejected|pinWrong|timeoutWithTicket|
+///   timeoutWithoutTicket` (default `success`). The filings it records are real records, so combine it with
+///   `-uiTesting YES` to keep them in the in-memory store.
 enum LaunchOptions {
     static let uiTestingToday = "2026-10-10"
 
@@ -114,6 +118,16 @@ enum LaunchOptions {
         UserDefaults.standard.string(forKey: "uiTestingExtractor") == "stub"
         #else
         false
+        #endif
+    }
+
+    /// The stub send scenario with `-elsterTransport stub` (`-elsterStubScenario`), or nil for real sending.
+    static var elsterStubScenario: String? {
+        #if DEBUG
+        guard UserDefaults.standard.string(forKey: "elsterTransport") == "stub" else { return nil }
+        return UserDefaults.standard.string(forKey: "elsterStubScenario") ?? "success"
+        #else
+        nil
         #endif
     }
 
