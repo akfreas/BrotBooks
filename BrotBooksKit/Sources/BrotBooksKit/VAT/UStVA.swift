@@ -43,6 +43,12 @@ public struct UStVAIssue: Sendable, Hashable {
         case missingCustomerVatID
         /// The rate table has no rate for the record date; no self-assessed VAT is computed.
         case missingVatRate
+        /// EU B2B income whose customer VAT ID doesn't look like an EU VAT ID outside Germany
+        /// (`CustomerVatID.isPlausible`); it is still reported under that ID.
+        case implausibleCustomerVatID
+        /// A draft dated in the period. Drafts count toward nothing until approved; `aggregate` skips them and
+        /// `UStVAAggregator.draftIssues` reports them.
+        case draftInPeriod
     }
 
     public var code: Code
@@ -80,6 +86,25 @@ public struct ZMLine: Sendable, Hashable {
 
     static func normalize(_ vatID: String?) -> String {
         (vatID ?? "").uppercased().filter { !$0.isWhitespace && $0 != "." && $0 != "-" }
+    }
+}
+
+/// A plausibility check of an EU customer's VAT ID (not a validity check, which needs the BZSt).
+public enum CustomerVatID {
+    /// The EU member state prefixes of VAT IDs, without Germany (`EL` for Greece, `XI` for Northern Ireland).
+    public static let foreignEUPrefixes: Set<String> = [
+        "AT", "BE", "BG", "CY", "CZ", "DK", "EE", "EL", "ES", "FI", "FR", "HR", "HU", "IE", "IT", "LT", "LU", "LV",
+        "MT", "NL", "PL", "PT", "RO", "SE", "SI", "SK", "XI",
+    ]
+
+    /// `vatID` (normalized like a ZM line: uppercase, no spaces, dots or dashes) starts with another EU state's
+    /// prefix followed by 2–12 letters or digits containing at least one digit.
+    public static func isPlausible(_ vatID: String) -> Bool {
+        let id = ZMLine.normalize(vatID)
+        guard id.count >= 4, id.count <= 14, foreignEUPrefixes.contains(String(id.prefix(2))) else { return false }
+        let rest = id.dropFirst(2)
+        return rest.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "+" || $0 == "*") }
+            && rest.contains { $0.isNumber }
     }
 }
 
@@ -202,6 +227,13 @@ public enum UStVAAggregator {
                            zmLines: zm, issues: acc.issues, recordUIDs: included)
     }
 
+    /// The drafts (not removed) dated in `period`, as `draftInPeriod` issues. Kept apart from `aggregate`, which
+    /// leaves drafts out entirely; the VAT returns screen shows both lists.
+    public static func draftIssues(_ records: [UStVARecord], period: VatPeriod) -> [UStVAIssue] {
+        records.filter { $0.isDraft && !$0.isRemoved && period.contains($0.values["date"]?.date ?? "") }
+            .map { UStVAIssue(.draftInPeriod, recordUID: $0.uid, kind: $0.kind) }
+    }
+
     struct ZMKey: Hashable {
         var vatID: String
         var art: ZMUmsatzart
@@ -269,7 +301,11 @@ public enum UStVAAggregator {
             acc.add(net, to: slot.base, record)
             if let art = slot.zm {
                 let vatID = ZMLine.normalize(values["client_vat_number"]?.text)
-                if vatID.isEmpty { acc.issue(.missingCustomerVatID, record) }
+                if vatID.isEmpty {
+                    acc.issue(.missingCustomerVatID, record)
+                } else if !CustomerVatID.isPlausible(vatID) {
+                    acc.issue(.implausibleCustomerVatID, record)
+                }
                 let key = ZMKey(vatID: vatID, art: art)
                 acc.zm[key, default: (0, [])].amount += net
                 acc.zm[key, default: (0, [])].uids.append(record.uid)
