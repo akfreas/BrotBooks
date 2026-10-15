@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-<!-- Used by scripts/build.sh mac and the Testing configuration: no iCloud entitlements, so the app runs ad-hoc signed with the
-     on-device store. App Sandbox and file access come from the ENABLE_* build settings. -->
-<dict/>
+<dict>
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
+</dict>
 </plist>
