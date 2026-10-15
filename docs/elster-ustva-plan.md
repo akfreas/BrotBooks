@@ -67,7 +67,7 @@ All filing rules come from a `TaxConfiguration` in BrotBooksKit. The aggregator,
 - **Kennzahl mapping:** a table from `VatTreatment` + rate to Kennzahl, versioned per UStVA year, because Kennzahlen occasionally change between years (check `Deltadokumentation/<year>`).
 - **ZM frequency check:** the app warns when a quarter's EU goods deliveries cross the configured threshold while ZM is set to quarterly. It suggests switching but never switches by itself.
 
-**Sondervorauszahlung (UStSV).** With Dauerfristverlängerung and monthly filing, the Sondervorauszahlung must be filed by 10 Feb each year. It goes through the same UStVA data type (sample `Beispiele/UStVA_2026_SoVZ_*.xml`). The amount is credited in the December return as Kz39. Both are part of M2/M4 when the setting is on.
+**Sondervorauszahlung (UStSV).** With Dauerfristverlängerung and monthly filing, the Sondervorauszahlung must be filed by 10 Feb each year. It goes through the same UStVA data type (sample `Beispiele/UStVA_SoVZ_2026.xml`, `UStVA_Df_2026.xml` for the Dauerfristverlängerung application). The amount is credited in the December return as Kz39. Both are part of M2/M4 when the setting is on.
 
 ## 1. Architecture overview
 
@@ -150,7 +150,7 @@ Why it is shaped like this:
      - A suggestion is shown as unconfirmed until it is set explicitly. The UStVA screen blocks sending while the period has unconfirmed records.
      - Goods vs. service always needs a confirmation.
    - **Editor:** a "VAT treatment" select field in `EditForm.fields` for both kinds.
-   - **Deductible share:** `deductibleAmount / net` when set (car, phone, home office), otherwise 100%. Defining this rule is part of M2 and gets its own tests.
+   - **Deductible share:** `deductibleAmount / convertedGross` when set (deductibleAmount is a gross amount) (car, phone, home office), otherwise 100%. Defining this rule is part of M2 and gets its own tests.
 3. **`UStVAAggregator`** turns the period and records into `Kennzahlen` plus a list of `ZMLine` (customer VAT ID, Umsatzart, amount).
    - It works from `vatRates`, `vatTreatment` and the EUR conversion. `LedgerEntry` (`Summary.swift:10-47`) can't be used because it has no per-rate breakdown or region.
    - Exclude drafts, removed records and VAT settlement records (`isVatPayment` / `isVatRefund`).
@@ -275,8 +275,8 @@ Known facts carried forward:
 - The shipped ERiC dylibs are `linker-signed`, and `dlopen` hangs in the kernel signature check (`fcntl` in `mapSegments`) until they are re-signed (`codesign --force -s -` or with the team identity). Downloaded copies also carry `com.apple.quarantine`.
 - Agents must not send to ELSTER servers. Only local validation (`ERIC_VALIDIERE`) is allowed without the user present.
 
-- [~] U1: M1, vendoring, re-signing, `EricKit` bridge, ERiC version in Settings. Committed as f31c2e8, 1d8bb69, 91880e1, 3390376, 433cdd3. Tests are green, and the mac (ad-hoc and `--signed`) and ios-sim builds succeed.
-  - **BLOCKED (ad-hoc runtime):** hardened-runtime library validation rejects the ad-hoc dylibs ("different Team IDs"). Options: (a) build `ENABLE_HARDENED_RUNTIME=NO` for ad-hoc builds, or (b) add `com.apple.security.cs.disable-library-validation` to `BrotBooks-Local.entitlements`. Awaiting the user's choice.
+- [x] U1: M1, vendoring, re-signing, `EricKit` bridge, ERiC version in Settings. Committed as f31c2e8, 1d8bb69, 91880e1, 3390376, 433cdd3. Tests are green, and the mac (ad-hoc and `--signed`) and ios-sim builds succeed.
+  - **Resolved:** the user added `disable-library-validation` to the Local entitlements (7672057). The ad-hoc launch then loaded ERiC, and so did the signed sandboxed launch. Original blocker: hardened-runtime library validation rejects the ad-hoc dylibs ("different Team IDs"). Options: (a) build `ENABLE_HARDENED_RUNTIME=NO` for ad-hoc builds, or (b) add `com.apple.security.cs.disable-library-validation` to `BrotBooks-Local.entitlements`. Awaiting the user's choice.
   - **Not yet verified:** the signed sandboxed launch. A container-consent prompt ("me.freas.BrotBooks would like to access data from other apps") must be allowed once by the user. A team-signed probe loads ERiC fine under the hardened runtime.
   - **Handoff:**
     - API: `public actor EricService(ericDirectory:logDirectory:versionFile:)`, `.bundled()`, `version()`, `shutdown()`. Helpers: `withInstance` and `withReturnBuffer`.
@@ -285,7 +285,11 @@ Known facts carried forward:
     - Hersteller-ID: Info.plist key `ElsterHerstellerID` (String).
     - `update-strings.py` reformats the whole catalog, so add strings by hand.
     - Package dependencies use `destinationFilters: [macOS]`.
-- [ ] U2: M2a, tax configuration (`TaxProfile`/`TaxSettingsPeriod`, `VatRateTable`, `FilingDeadlines`, `VatPeriod`) and the `vatTreatment` field (model, suggestion, editor)
+- [x] U2: M2a, committed as f9a7b55, 6490213, 166ff87. 128 tests green; mac and ios-sim builds succeed.
+  - **Confirmed treatment:** `vatTreatment` nil means unset, and any stored value counts as confirmed. Suggestions are computed on the fly (`VatTreatmentStatus.of`).
+  - **Storage:** `TaxProfile` @Model holds the identity plus `settingsPeriods` JSON. API: `TaxSettings.configuration(for: VatPeriod)`, `VatRateTable.germany`, `FilingDeadlines.germany`.
+  - **Deviation from the plan:** the deductible share is `deductibleAmount / gross`, because `deductibleAmount` is a gross EUR amount.
+  - **Open:** due dates are not moved off weekends and holidays (§108(3) AO). Duplicate `TaxProfile` rows across devices are not cleaned up. The editor does not show suggestions yet (U4).
 - [ ] U3: M2b, `UStVAAggregator`, Kennzahlen, Kz83, `UStVAXML` (incl. Sondervorauszahlung), golden tests, env-gated live ERiC validation
 - [ ] U4: M3, validate and preview in `EricService`, VAT returns UI, ELSTER settings section, license acknowledgment
 - [ ] U5: M4, certificate and PIN in the Keychain, send, `VatFiling`, stub transport, send-flow UI
