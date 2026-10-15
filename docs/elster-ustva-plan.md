@@ -290,7 +290,13 @@ Known facts carried forward:
   - **Storage:** `TaxProfile` @Model holds the identity plus `settingsPeriods` JSON. API: `TaxSettings.configuration(for: VatPeriod)`, `VatRateTable.germany`, `FilingDeadlines.germany`.
   - **Deviation from the plan:** the deductible share is `deductibleAmount / gross`, because `deductibleAmount` is a gross EUR amount.
   - **Open:** due dates are not moved off weekends and holidays (§108(3) AO). Duplicate `TaxProfile` rows across devices are not cleaned up. The editor does not show suggestions yet (U4).
-- [ ] U3: M2b, `UStVAAggregator`, Kennzahlen, Kz83, `UStVAXML` (incl. Sondervorauszahlung), golden tests, env-gated live ERiC validation
-- [ ] U4: M3, validate and preview in `EricService`, VAT returns UI, ELSTER settings section, license acknowledgment
+- [x] U3: M2b, committed as 5179621, a1b5d9c, 365618f. BrotBooksKit 156 tests and EricKit 13 tests green; mac and ios-sim builds succeed.
+  - **Live ERiC validation:** 0 errors for domestic, all treatments, refund, December with Kz39, Sondervorauszahlung (SoVZ) and Dauerfristverlängerung (Df). The only hints are the missing WIdNr, and "period in future" for December.
+  - **API:** `UStVAAggregator.aggregate(_:period:configuration:sondervorauszahlung:) -> UStVAResult` (kennzahlen, contributions, zmLines, issues, blocksSending). `UStVAXML.build` / `buildSondervorauszahlung` / `buildDauerfristverlaengerung`. `EricService.validate(xml:datenartVersion:) -> EricValidationResult`.
+  - **Vorsteuer share:** `VorsteuerShareRules.default` maps keywords to a policy (meals full, gifts none, phone/car/home office follow the deductible share). It is stored in `TaxProfile.vorsteuerShareRules`.
+  - **Bug to fix in U4a:** the Sondervorauszahlung base must be the prior-year Kz83 sum **plus** the prior-year Sondervorauszahlung (form text for Kz38). U2 uses the Kz83 sum only.
+  - **To add in U4a:** a WIdNr field on `TaxIdentity`.
+- [ ] U4a: M3 part 1, preview PDF in `EricService`, Steuernummer conversion and Finanzamt lookup, ELSTER settings section (identity incl. WIdNr, filing settings per year), license acknowledgment, Sondervorauszahlung base fix
+- [ ] U4b: M3 part 2, VAT returns screen (list, detail, drill-down, issues, validate, preview), unconfirmed-treatment review list, editor shows suggestions
 - [ ] U5: M4, certificate and PIN in the Keychain, send, `VatFiling`, stub transport, send-flow UI
 - [ ] U6: M4b, ZM (ZMDO) XML, sending, UI, consistency check
