@@ -296,7 +296,19 @@ Known facts carried forward:
   - **Vorsteuer share:** `VorsteuerShareRules.default` maps keywords to a policy (meals full, gifts none, phone/car/home office follow the deductible share). It is stored in `TaxProfile.vorsteuerShareRules`.
   - **Bug to fix in U4a:** the Sondervorauszahlung base must be the prior-year Kz83 sum **plus** the prior-year Sondervorauszahlung (form text for Kz38). U2 uses the Kz83 sum only.
   - **To add in U4a:** a WIdNr field on `TaxIdentity`.
-- [ ] U4a: M3 part 1, preview PDF in `EricService`, Steuernummer conversion and Finanzamt lookup, ELSTER settings section (identity incl. WIdNr, filing settings per year), license acknowledgment, Sondervorauszahlung base fix
+- [x] U4a: M3 part 1, committed as 95f262b, 71c43fb, 1bf558b, 780b78f, 53811a7, 71d8121. BrotBooksKit 159 tests and EricKit 22 tests green; builds succeed.
+  - **What works:** preview PDF via the C collector `CEricPdfCollect`; Steuernummer conversion and check; Bundesland and Finanzamt lookups; the license sheet with verbatim texts; the ELSTER settings tab (TabView in the macOS Settings scene); W-IdNr (only `DE`+9 digits in the XML); the Sondervorauszahlung base fix.
+  - **Handoff:**
+    - License gate: `.requiresElsterLicenseAcknowledgment()`.
+    - Settings: `ElsterSettingsModel(context:)` (with `update {}`) or `TaxProfile.load(in:)`.
+    - `EricService.preview(xml:datenartVersion:) -> EricPreviewResult(.pdf, .validation)`.
+    - `EricRuntime.herstellerID`.
+    - Sondervorauszahlung: `Sondervorauszahlung.amount(priorYearKz83Total:priorYearSondervorauszahlung:settings:)`.
+    - Screenshots: `-snapshotSettings` (DEBUG) needs an unsandboxed build.
+  - **Open:**
+    - The test Finanzämter 1096/9198 are not in the `HoleFinanzaemter` list.
+    - The settings model does not reload on CloudKit changes while the tab is open.
+    - The Sondervorauszahlung default can't be computed until filings exist (U5).
 - [ ] U4b: M3 part 2, VAT returns screen (list, detail, drill-down, issues, validate, preview), unconfirmed-treatment review list, editor shows suggestions
 - [ ] U5: M4, certificate and PIN in the Keychain, send, `VatFiling`, stub transport, send-flow UI
 - [ ] U6: M4b, ZM (ZMDO) XML, sending, UI, consistency check
