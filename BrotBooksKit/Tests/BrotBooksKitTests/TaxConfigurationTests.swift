@@ -71,14 +71,31 @@ import Testing
     }
 
     @Test func sondervorauszahlungIsAnEleventhOfThePriorYearUnlessOverridden() {
-        #expect(Sondervorauszahlung.computed(priorYearKz83Total: 11_000) == 1_000)
-        #expect(Sondervorauszahlung.computed(priorYearKz83Total: dec("17050.00")) == dec("1550"))
-        #expect(Sondervorauszahlung.computed(priorYearKz83Total: 100) == dec("9.09"))
-        #expect(Sondervorauszahlung.computed(priorYearKz83Total: -500) == 0)
+        #expect(Sondervorauszahlung.computed(priorYearKz83Total: 11_000, priorYearSondervorauszahlung: 0) == 1_000)
+        #expect(Sondervorauszahlung.computed(priorYearKz83Total: dec("17050.00"), priorYearSondervorauszahlung: 0)
+                == dec("1550"))
+        #expect(Sondervorauszahlung.computed(priorYearKz83Total: 100, priorYearSondervorauszahlung: 0) == dec("9.09"))
+        #expect(Sondervorauszahlung.computed(priorYearKz83Total: -500, priorYearSondervorauszahlung: 0) == 0)
         let auto = TaxSettingsPeriod.initial()
-        #expect(Sondervorauszahlung.amount(priorYearKz83Total: 11_000, settings: auto) == 1_000)
+        #expect(Sondervorauszahlung.amount(priorYearKz83Total: 11_000, priorYearSondervorauszahlung: 0,
+                                           settings: auto) == 1_000)
         let edited = TaxSettingsPeriod(effectiveFrom: "2026-01-01", sondervorauszahlungOverride: 800)
-        #expect(Sondervorauszahlung.amount(priorYearKz83Total: 11_000, settings: edited) == 800)
+        #expect(Sondervorauszahlung.amount(priorYearKz83Total: 11_000, priorYearSondervorauszahlung: 1_000,
+                                           settings: edited) == 800)
+    }
+
+    /// The December return credits the prior Sondervorauszahlung as Kz39, so the year's Kz83 sum is net of it. The
+    /// advance payments (Kz38 base) add it back: 12 months of 1,000 with 1,000 credited in December sum to 11,000
+    /// in Kz83, but the advance payments were 12,000.
+    @Test func sondervorauszahlungBaseAddsThePriorSondervorauszahlungBack() {
+        #expect(Sondervorauszahlung.computed(priorYearKz83Total: 11_000, priorYearSondervorauszahlung: 1_000)
+                == dec("1090.91"))
+        #expect(Sondervorauszahlung.amount(priorYearKz83Total: 11_000, priorYearSondervorauszahlung: 1_000,
+                                           settings: .initial()) == dec("1090.91"))
+        // A refund year: Kz83 negative, but the Sondervorauszahlung paid in still counts.
+        #expect(Sondervorauszahlung.computed(priorYearKz83Total: -100, priorYearSondervorauszahlung: 1_200)
+                == dec("100"))
+        #expect(Sondervorauszahlung.computed(priorYearKz83Total: -1_500, priorYearSondervorauszahlung: 1_000) == 0)
     }
 
     @Test func zmThresholdWarnsOnlyForQuarterlyZMAboveTheThreshold() {

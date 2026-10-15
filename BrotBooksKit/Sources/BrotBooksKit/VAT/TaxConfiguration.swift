@@ -24,7 +24,8 @@ public struct TaxSettingsPeriod: Sendable, Equatable, Hashable, Codable {
     public var taxationMethod: TaxationMethod
     public var ustvaFrequency: FilingFrequency
     public var dauerfristverlaengerung: Bool
-    /// The Sondervorauszahlung entered by hand; nil uses 1/11 of the prior year (`Sondervorauszahlung.computed`).
+    /// The Sondervorauszahlung entered by hand; nil uses 1/11 of the prior year's advance payments
+    /// (`Sondervorauszahlung.computed`).
     public var sondervorauszahlungOverride: Decimal?
     public var zmFrequency: ZMFrequency
     /// EU goods deliveries per quarter above which quarterly ZM filing gets a warning.
@@ -206,14 +207,25 @@ public struct TaxConfiguration: Sendable, Equatable {
 
 /// The Sondervorauszahlung (UStSV) owed for a Dauerfristverlängerung with monthly filing.
 public enum Sondervorauszahlung {
-    /// 1/11 of the prior year's advance payments (the sum of its Kz83), rounded to cents; 0 when that sum is not positive.
-    public static func computed(priorYearKz83Total: Decimal) -> Decimal {
-        priorYearKz83Total > 0 ? Money.rounded(priorYearKz83Total / 11) : 0
+    /// 1/11 of the prior year's advance payments, rounded to cents; 0 when they are not positive.
+    ///
+    /// The advance payments are the sum of the prior year's Kz83 **plus** the prior year's Sondervorauszahlung:
+    /// that year's December return credited the Sondervorauszahlung (Kz39), so its Kz83 is already net of it
+    /// (form text for Kz38).
+    /// - Parameters:
+    ///   - priorYearKz83Total: the sum of Kz83 over the prior year's returns.
+    ///   - priorYearSondervorauszahlung: the Sondervorauszahlung of the prior year (credited as Kz39 in its
+    ///     December return); 0 when there was none.
+    public static func computed(priorYearKz83Total: Decimal, priorYearSondervorauszahlung: Decimal) -> Decimal {
+        let advancePayments = priorYearKz83Total + priorYearSondervorauszahlung
+        return advancePayments > 0 ? Money.rounded(advancePayments / 11) : 0
     }
 
     /// The override from the settings when one is entered, otherwise `computed`.
-    public static func amount(priorYearKz83Total: Decimal, settings: TaxSettingsPeriod) -> Decimal {
-        settings.sondervorauszahlungOverride ?? computed(priorYearKz83Total: priorYearKz83Total)
+    public static func amount(priorYearKz83Total: Decimal, priorYearSondervorauszahlung: Decimal,
+                              settings: TaxSettingsPeriod) -> Decimal {
+        settings.sondervorauszahlungOverride
+            ?? computed(priorYearKz83Total: priorYearKz83Total, priorYearSondervorauszahlung: priorYearSondervorauszahlung)
     }
 }
 
