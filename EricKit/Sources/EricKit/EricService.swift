@@ -234,7 +234,7 @@ public actor EricService {
     }
 
     /// `EricMtHoleFehlerText` for `code`, or nil when ERiC has none.
-    private func errorText(_ code: Int32, api: CEricAPI, instance: EricInstanzHandle) -> String? {
+    func errorText(_ code: Int32, api: CEricAPI, instance: EricInstanzHandle) -> String? {
         guard let buffer = api.EricMtRueckgabepufferErzeugen(instance) else { return nil }
         defer { _ = api.EricMtRueckgabepufferFreigeben(instance, buffer) }
         guard api.EricMtHoleFehlerText(instance, code, buffer) == ERIC_OK.rawValue,

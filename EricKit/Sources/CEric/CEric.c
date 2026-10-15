@@ -39,6 +39,12 @@ int CEricLoad(const char *libraryPath, CEricAPI *api, char *error, size_t errorS
         { "EricMtPruefeSteuernummer", (void **)&loaded.EricMtPruefeSteuernummer },
         { "EricMtHoleFinanzamtLandNummern", (void **)&loaded.EricMtHoleFinanzamtLandNummern },
         { "EricMtHoleFinanzaemter", (void **)&loaded.EricMtHoleFinanzaemter },
+        { "EricMtZertifikatOeffnenAusBytes", (void **)&loaded.EricMtZertifikatOeffnenAusBytes },
+        { "EricMtCloseHandleToCertificate", (void **)&loaded.EricMtCloseHandleToCertificate },
+        { "EricMtHoleZertifikatEigenschaften", (void **)&loaded.EricMtHoleZertifikatEigenschaften },
+        { "EricMtGetErrormessagesFromXMLAnswer", (void **)&loaded.EricMtGetErrormessagesFromXMLAnswer },
+        { "EricMtRegistriereFortschrittCallback", (void **)&loaded.EricMtRegistriereFortschrittCallback },
+        { "EricMtRegistriereGlobalenFortschrittCallback", (void **)&loaded.EricMtRegistriereGlobalenFortschrittCallback },
     };
     for (size_t i = 0; i < sizeof(symbols) / sizeof(symbols[0]); i++) {
         void *symbol = dlsym(handle, symbols[i].name);

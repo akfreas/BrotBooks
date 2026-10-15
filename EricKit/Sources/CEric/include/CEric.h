@@ -35,6 +35,21 @@ typedef int (*CEricMtPruefeSteuernummer)(EricInstanzHandle instanz, const char *
 typedef int (*CEricMtHoleFinanzamtLandNummern)(EricInstanzHandle instanz, EricRueckgabepufferHandle rueckgabeXmlPuffer);
 typedef int (*CEricMtHoleFinanzaemter)(EricInstanzHandle instanz, const char *finanzamtLandNummer,
                                        EricRueckgabepufferHandle rueckgabeXmlPuffer);
+typedef int (*CEricMtZertifikatOeffnenAusBytes)(EricInstanzHandle instanz, EricZertifikatHandle *hToken,
+                                                const byteChar *pkcs12Container, uint32_t containerGroesse,
+                                                const byteChar *pkcs12Passwort);
+typedef int (*CEricMtCloseHandleToCertificate)(EricInstanzHandle instanz, EricZertifikatHandle hToken);
+typedef int (*CEricMtHoleZertifikatEigenschaften)(EricInstanzHandle instanz, EricZertifikatHandle hToken,
+                                                  const byteChar *pin, EricRueckgabepufferHandle rueckgabeXmlPuffer);
+typedef int (*CEricMtGetErrormessagesFromXMLAnswer)(EricInstanzHandle instanz, const char *xml,
+                                                    EricRueckgabepufferHandle transferticketPuffer,
+                                                    EricRueckgabepufferHandle returncodeTHPuffer,
+                                                    EricRueckgabepufferHandle fehlertextTHPuffer,
+                                                    EricRueckgabepufferHandle returncodesUndFehlertexteNDHXmlPuffer);
+typedef int (*CEricMtRegistriereFortschrittCallback)(EricInstanzHandle instanz, EricFortschrittCallback funktion,
+                                                     void *benutzerdaten);
+typedef int (*CEricMtRegistriereGlobalenFortschrittCallback)(EricInstanzHandle instanz,
+                                                             EricFortschrittCallback funktion, void *benutzerdaten);
 
 /// The resolved ERiC functions. Every field is non-NULL after a successful CEricLoad().
 typedef struct CEricAPI {
@@ -51,6 +66,12 @@ typedef struct CEricAPI {
     CEricMtPruefeSteuernummer EricMtPruefeSteuernummer;
     CEricMtHoleFinanzamtLandNummern EricMtHoleFinanzamtLandNummern;
     CEricMtHoleFinanzaemter EricMtHoleFinanzaemter;
+    CEricMtZertifikatOeffnenAusBytes EricMtZertifikatOeffnenAusBytes;
+    CEricMtCloseHandleToCertificate EricMtCloseHandleToCertificate;
+    CEricMtHoleZertifikatEigenschaften EricMtHoleZertifikatEigenschaften;
+    CEricMtGetErrormessagesFromXMLAnswer EricMtGetErrormessagesFromXMLAnswer;
+    CEricMtRegistriereFortschrittCallback EricMtRegistriereFortschrittCallback;
+    CEricMtRegistriereGlobalenFortschrittCallback EricMtRegistriereGlobalenFortschrittCallback;
 } CEricAPI;
 
 /// Loads libericapi.dylib from `libraryPath` (absolute, file-system representation) with
