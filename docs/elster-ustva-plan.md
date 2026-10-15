@@ -275,7 +275,16 @@ Known facts carried forward:
 - The shipped ERiC dylibs are `linker-signed`, and `dlopen` hangs in the kernel signature check (`fcntl` in `mapSegments`) until they are re-signed (`codesign --force -s -` or with the team identity). Downloaded copies also carry `com.apple.quarantine`.
 - Agents must not send to ELSTER servers. Only local validation (`ERIC_VALIDIERE`) is allowed without the user present.
 
-- [ ] U1: M1, vendoring, re-signing, `EricKit` bridge, ERiC version in Settings
+- [~] U1: M1, vendoring, re-signing, `EricKit` bridge, ERiC version in Settings. Committed as f31c2e8, 1d8bb69, 91880e1, 3390376, 433cdd3. Tests are green, and the mac (ad-hoc and `--signed`) and ios-sim builds succeed.
+  - **BLOCKED (ad-hoc runtime):** hardened-runtime library validation rejects the ad-hoc dylibs ("different Team IDs"). Options: (a) build `ENABLE_HARDENED_RUNTIME=NO` for ad-hoc builds, or (b) add `com.apple.security.cs.disable-library-validation` to `BrotBooks-Local.entitlements`. Awaiting the user's choice.
+  - **Not yet verified:** the signed sandboxed launch. A container-consent prompt ("me.freas.BrotBooks would like to access data from other apps") must be allowed once by the user. A team-signed probe loads ERiC fine under the hardened runtime.
+  - **Handoff:**
+    - API: `public actor EricService(ericDirectory:logDirectory:versionFile:)`, `.bundled()`, `version()`, `shutdown()`. Helpers: `withInstance` and `withReturnBuffer`.
+    - Adding a function: typedef and field in `CEric.h`, plus a row in `symbols[]` in `CEric.c`.
+    - Paths: tests find ERiC via `$ERIC_DIR` or `<repo>/Vendor/ERiC`. The app uses `EricRuntime.shared` in `BrotBooks/VAT/EricRuntime.swift`.
+    - Hersteller-ID: Info.plist key `ElsterHerstellerID` (String).
+    - `update-strings.py` reformats the whole catalog, so add strings by hand.
+    - Package dependencies use `destinationFilters: [macOS]`.
 - [ ] U2: M2a, tax configuration (`TaxProfile`/`TaxSettingsPeriod`, `VatRateTable`, `FilingDeadlines`, `VatPeriod`) and the `vatTreatment` field (model, suggestion, editor)
 - [ ] U3: M2b, `UStVAAggregator`, Kennzahlen, Kz83, `UStVAXML` (incl. Sondervorauszahlung), golden tests, env-gated live ERiC validation
 - [ ] U4: M3, validate and preview in `EricService`, VAT returns UI, ELSTER settings section, license acknowledgment
