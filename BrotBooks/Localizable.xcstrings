@@ -205,6 +205,9 @@
     "Drop a PDF or photo here or choose one to attach it to this record." : {
 
     },
+    "ELSTER" : {
+
+    },
     "Enter the conversion rate to EUR" : {
 
     },
@@ -212,6 +215,18 @@
 
     },
     "Enter the invoice date" : {
+
+    },
+    "ERiC" : {
+
+    },
+    "ERiC %@, no UStVA plugin" : {
+
+    },
+    "ERiC %@, UStVA %@ plugin available" : {
+
+    },
+    "ERiC %@, UStVA %@ plugins available" : {
 
     },
     "Estimate" : {
@@ -349,6 +364,9 @@
     "Loading document…" : {
 
     },
+    "Loading…" : {
+
+    },
     "Local storage was requested at launch, so nothing syncs with iCloud." : {
 
     },
@@ -407,6 +425,9 @@
       "extractionState" : "manual"
     },
     "No VAT on this record." : {
+
+    },
+    "Not available: %@" : {
 
     },
     "Not counted in totals" : {
