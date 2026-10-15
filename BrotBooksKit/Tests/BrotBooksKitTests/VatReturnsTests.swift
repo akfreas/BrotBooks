@@ -70,10 +70,13 @@ import Testing
         #expect(VatReturnStatus.of(march, today: "2026-05-10") == .dueIn(days: 0))
         #expect(VatReturnStatus.of(march, today: "2026-05-11") == .overdue(days: 1))
         #expect(VatReturnStatus.of(march, today: "2027-05-11") == .overdue(days: 366))
-        #expect(VatReturnStatus.of(march, today: "2027-05-11", filing: .test) == .filedTest)
         #expect(VatReturnStatus.of(march, today: "2026-03-01", filing: .production) == .filed)
-        #expect(VatReturnStatus.filedTest.isOpen)
+        #expect(VatReturnStatus.of(march, today: "2027-05-11", filing: .elsewhere) == .filedElsewhere)
+        // An uncertain send replaces "Overdue" with its own status, which still counts as open.
+        #expect(VatReturnStatus.of(march, today: "2027-05-11", filing: .uncertain) == .uncertain)
+        #expect(VatReturnStatus.uncertain.isOpen)
         #expect(!VatReturnStatus.filed.isOpen)
+        #expect(!VatReturnStatus.filedElsewhere.isOpen)
         let sv = items.first { $0.id == "2026-sondervorauszahlung" }!
         #expect(VatReturnStatus.of(sv, today: "2025-12-31") == .notDue)
         #expect(VatReturnStatus.of(sv, today: "2026-01-01") == .dueIn(days: 40))

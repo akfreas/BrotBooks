@@ -17,12 +17,18 @@ public struct VatReturnItem: Sendable, Equatable, Identifiable {
     public var dueDate: String
     /// The first day the return can be filed: the day after its period ends; 1 January for the yearly returns.
     public var fileableFrom: String
+    /// The prior year's advance payments from its filings, when known
+    /// (`VatReturnSchedule.items(years:settings:filings:)`); the Sondervorauszahlung is computed from it unless
+    /// the settings override it.
+    public var sondervorauszahlungBasis: SondervorauszahlungBasis?
 
-    public init(type: ReturnType, configuration: TaxConfiguration, dueDate: String, fileableFrom: String) {
+    public init(type: ReturnType, configuration: TaxConfiguration, dueDate: String, fileableFrom: String,
+                sondervorauszahlungBasis: SondervorauszahlungBasis? = nil) {
         self.type = type
         self.configuration = configuration
         self.dueDate = dueDate
         self.fileableFrom = fileableFrom
+        self.sondervorauszahlungBasis = sondervorauszahlungBasis
     }
 
     /// Stable across reloads: `2026-03`, `2026-41`, `2026-sondervorauszahlung`, `2026-dauerfristverlaengerung`.
@@ -50,18 +56,28 @@ public struct VatReturnItem: Sendable, Equatable, Identifiable {
     public var datenartVersion: String { UStVAXML.datenartVersion(year: year) }
 
     /// The Sondervorauszahlung this return files (Kz38) or credits (Kz39 in December): the amount entered in the
-    /// settings. Nil when the return has none, or when it needs one that isn't entered yet
-    /// (`needsSondervorauszahlungAmount`); 1/11 of the prior year can't be computed until filings are recorded.
+    /// settings, else 1/11 of the prior year's advance payments from its filings
+    /// (`Sondervorauszahlung.amount`). Nil when the return has none, or when it needs one that is neither entered
+    /// nor computable (`needsSondervorauszahlungAmount`).
     public var sondervorauszahlung: Decimal? {
-        usesSondervorauszahlung ? configuration.settings.sondervorauszahlungOverride : nil
+        guard usesSondervorauszahlung else { return nil }
+        if let basis = sondervorauszahlungBasis { return basis.amount(settings: configuration.settings) }
+        return configuration.settings.sondervorauszahlungOverride
     }
 
-    /// The return needs a Sondervorauszahlung amount that isn't entered in the settings.
+    /// The return needs a Sondervorauszahlung amount that is neither entered in the settings nor computable from
+    /// the prior year's filings.
     public var needsSondervorauszahlungAmount: Bool {
-        usesSondervorauszahlung && configuration.settings.sondervorauszahlungOverride == nil
+        usesSondervorauszahlung && sondervorauszahlung == nil
     }
 
-    private var usesSondervorauszahlung: Bool {
+    /// The Sondervorauszahlung is computed from the prior year's filings (no override is entered).
+    public var computesSondervorauszahlung: Bool {
+        usesSondervorauszahlung && configuration.settings.sondervorauszahlungOverride == nil
+            && sondervorauszahlungBasis != nil
+    }
+
+    public var usesSondervorauszahlung: Bool {
         switch type {
         case .sondervorauszahlung: return true
         case .ustva(let period):
@@ -107,12 +123,14 @@ public struct VatReturnItem: Sendable, Equatable, Identifiable {
     }
 }
 
-/// Whether a return was filed, as recorded by a filing (`VatFiling`). Filings are not recorded yet, so callers
-/// pass nil.
+/// How a return stands for production, from its filings (`VatFilings.mark`). Test filings never set a mark.
 public enum VatFilingMark: Sendable, Equatable {
-    /// Sent with the ELSTER test marker.
-    case test
+    /// Accepted by ELSTER without the test marker.
     case production
+    /// Marked as filed outside the app.
+    case elsewhere
+    /// A send ended in a timeout or connection error: it may have arrived.
+    case uncertain
 }
 
 /// Where a return stands on `today`.
@@ -123,15 +141,18 @@ public enum VatReturnStatus: Sendable, Equatable {
     case dueIn(days: Int)
     /// Past its due date by `days`.
     case overdue(days: Int)
-    /// Sent with the test marker only; it still counts as open.
-    case filedTest
+    /// A send may have arrived; check Mein ELSTER. Replaces the due status, so it never shows as overdue.
+    case uncertain
+    case filedElsewhere
     case filed
 
-    /// `item` on the ISO `today`. A production filing wins; a test filing shows as `filedTest`.
+    /// `item` on the ISO `today`, given its production filing mark. Test filings don't change the status: the
+    /// production due status stays visible next to them.
     public static func of(_ item: VatReturnItem, today: String, filing: VatFilingMark? = nil) -> VatReturnStatus {
         switch filing {
         case .production: return .filed
-        case .test: return .filedTest
+        case .elsewhere: return .filedElsewhere
+        case .uncertain: return .uncertain
         case nil: break
         }
         if today < item.fileableFrom { return .notDue }
@@ -139,8 +160,8 @@ public enum VatReturnStatus: Sendable, Equatable {
         return days >= 0 ? .dueIn(days: days) : .overdue(days: -days)
     }
 
-    /// Not filed for real: test filings still count as open.
-    public var isOpen: Bool { self != .filed }
+    /// Not filed for production (an uncertain send still counts as open).
+    public var isOpen: Bool { self != .filed && self != .filedElsewhere }
 }
 
 /// The returns to show: per year, the UStVA periods of the configured frequency, plus the Sondervorauszahlung
