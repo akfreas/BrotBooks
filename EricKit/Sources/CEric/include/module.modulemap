@@ -1,0 +1,4 @@
+module CEric {
+    header "CEric.h"
+    export *
+}
