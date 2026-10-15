@@ -309,6 +309,15 @@ Known facts carried forward:
     - The test Finanzämter 1096/9198 are not in the `HoleFinanzaemter` list.
     - The settings model does not reload on CloudKit changes while the tab is open.
     - The Sondervorauszahlung default can't be computed until filings exist (U5).
-- [ ] U4b: M3 part 2, VAT returns screen (list, detail, drill-down, issues, validate, preview), unconfirmed-treatment review list, editor shows suggestions
+- [x] U4b: M3 part 2, committed as 637e947, b28fc63, 48e0d63, f5d4f2b. BrotBooksKit 176 tests and EricKit 22 tests green; builds succeed.
+  - **What's built:** the VAT returns screen (schedule from the configuration, the Sondervorauszahlung and Df items, drill-down, warnings, flags, validate, preview with Save…); the review list; the editor's "Suggested:" hint plus Confirm.
+  - **Build setting:** `ENABLE_USER_SELECTED_FILES` is now `readwrite`.
+  - **Seam for U5:**
+    - `VatReturnsModel.filingMark(for:)` returns nil for now.
+    - The Send button sits in `VatReturnDetail.header` and is disabled.
+    - Kz38/Kz39 use only the override; the computed amount is still missing.
+  - **Open:**
+    - 2025 shows no returns, because the settings start on 2026-01-01.
+    - Past periods all show as overdue until filings are recorded.
 - [ ] U5: M4, certificate and PIN in the Keychain, send, `VatFiling`, stub transport, send-flow UI
 - [ ] U6: M4b, ZM (ZMDO) XML, sending, UI, consistency check
