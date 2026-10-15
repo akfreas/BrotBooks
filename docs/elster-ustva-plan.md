@@ -319,5 +319,19 @@ Known facts carried forward:
   - **Open:**
     - 2025 shows no returns, because the settings start on 2026-01-01.
     - Past periods all show as overdue until filings are recorded.
-- [ ] U5: M4, certificate and PIN in the Keychain, send, `VatFiling`, stub transport, send-flow UI
+- [x] U5: M4, committed as ddc554f, e4bcee6, 5de3611, fd6e161, c8968d0. BrotBooksKit 187 tests and EricKit 41 tests green; builds succeed. Nothing was sent.
+  - **What's built:**
+    - the certificate import (Keychain, verified PIN, properties)
+    - `EricService.send` (EBV-6), with outcomes classified by `EricSendOutcome.classify`
+    - the `VatSubmitting` protocol and the stub (`-elsterTransport stub -elsterStubScenario …`)
+    - the `VatFiling` model (accepted, rejected, uncertain, filedElsewhere)
+    - the send sheet, with a second confirmation for production
+    - "Mark as filed elsewhere", single and bulk
+    - the Sondervorauszahlung computed from filings
+    - the Kz10 rule for corrections
+  - **Live send test** (user only): `cd EricKit && ERIC_LIVE_SEND=1 ERIC_TEST_PFX=<scratchpad>/jar/ERiC-44.3.6.0/Darwin-universal/Beispiel/ericdemo-cpp/test-softidnr-pse.pfx swift test --filter EricSendLiveTests`
+  - **Open:**
+    - Ad-hoc builds and `swift test` fall back to the login keychain. The data-protection keychain in the signed build is not yet verified.
+    - Commit e4bcee6 alone doesn't build the app (fixed in fd6e161).
+    - 2025 has no settings row.
 - [ ] U6: M4b, ZM (ZMDO) XML, sending, UI, consistency check
