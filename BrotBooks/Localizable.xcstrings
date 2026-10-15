@@ -1,6 +1,9 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%@ Choose your Finanzamt: numbers like 113/10010 need it." : {
+
+    },
     "%@ · %@" : {
 
     },
@@ -31,6 +34,15 @@
     "^[%lld row](inflect: true)" : {
 
     },
+    "A German USt-IdNr is DE followed by nine digits." : {
+
+    },
+    "A W-IdNr is DE followed by nine digits, optionally with a suffix like -00001." : {
+
+    },
+    "Acknowledge" : {
+
+    },
     "Active records" : {
 
     },
@@ -41,6 +53,12 @@
 
     },
     "Add Date" : {
+
+    },
+    "Add Rule" : {
+
+    },
+    "Add Settings from %@" : {
 
     },
     "Add VAT Rate" : {
@@ -79,6 +97,18 @@
     "Automatic reading isn't available. Fill it in by hand." : {
 
     },
+    "Before you use ELSTER features, read and acknowledge the data protection notices of the German tax administration." : {
+
+    },
+    "BrotBooks never sends this file anywhere. Share it only if you choose to, for example with support." : {
+
+    },
+    "Bundesland" : {
+
+    },
+    "By category" : {
+
+    },
     "Calculated" : {
 
     },
@@ -93,6 +123,9 @@
     },
     "Category" : {
       "extractionState" : "manual"
+    },
+    "Check" : {
+
     },
     "Check the date – it looks wrong" : {
 
@@ -112,6 +145,12 @@
     "Choose Photos…" : {
 
     },
+    "Choose…" : {
+
+    },
+    "City" : {
+
+    },
     "Clear" : {
 
     },
@@ -124,11 +163,20 @@
     "Client VAT number" : {
       "extractionState" : "manual"
     },
+    "Comma-separated keywords match whole words of an expense's category; end a keyword with * to match words starting with it. The first matching rule wins." : {
+
+    },
+    "Computed as 1/11 of the prior year's advance payments: the sum of its Kz83 plus its Sondervorauszahlung." : {
+
+    },
     "Container" : {
 
     },
     "Conversion rate to EUR" : {
       "extractionState" : "manual"
+    },
+    "Couldn't load the tax profile" : {
+
     },
     "Couldn't open your records" : {
 
@@ -145,11 +193,26 @@
     "Dashboard" : {
 
     },
+    "Data Protection Notice" : {
+
+    },
+    "Data Protection Notices" : {
+
+    },
     "Date" : {
       "extractionState" : "manual"
     },
+    "Dauerfristverlängerung" : {
+
+    },
     "Deductible amount (EUR)" : {
       "extractionState" : "manual"
+    },
+    "Deductible share" : {
+
+    },
+    "Delete Rule" : {
+
     },
     "Description" : {
       "extractionState" : "manual"
@@ -227,7 +290,19 @@
     "Drop a PDF or photo here or choose one to attach it to this record." : {
 
     },
+    "Each set of settings applies from its date until the next one starts. The Finanzamt usually sets them per calendar year, so add new settings from 1 January instead of changing past ones." : {
+
+    },
     "ELSTER" : {
+
+    },
+    "ELSTER format" : {
+
+    },
+    "Email" : {
+
+    },
+    "Enter Sondervorauszahlung by hand" : {
 
     },
     "Enter the conversion rate to EUR" : {
@@ -237,6 +312,9 @@
 
     },
     "Enter the invoice date" : {
+
+    },
+    "Enter the Steuernummer as it appears on letters from your Finanzamt. It is converted to the ELSTER format and checked." : {
 
     },
     "ERiC" : {
@@ -249,6 +327,9 @@
 
     },
     "ERiC %@, UStVA %@ plugins available" : {
+
+    },
+    "ERiC is not available: %@" : {
 
     },
     "Estimate" : {
@@ -328,6 +409,12 @@
     "Failed: %@" : {
 
     },
+    "Filing Settings" : {
+
+    },
+    "Finanzamt" : {
+
+    },
     "Find" : {
 
     },
@@ -335,6 +422,12 @@
 
     },
     "Foreign currency – enter the rate" : {
+
+    },
+    "Full VAT" : {
+
+    },
+    "General" : {
 
     },
     "German taxes for a single filer; the invoice date decides which year a record counts in." : {
@@ -349,10 +442,19 @@
     "Gross amount" : {
       "extractionState" : "manual"
     },
+    "Hersteller-ID" : {
+
+    },
     "Hidden" : {
 
     },
     "Hide Files" : {
+
+    },
+    "Home office records" : {
+
+    },
+    "House number" : {
 
     },
     "iCloud" : {
@@ -414,6 +516,9 @@
     "in %@" : {
 
     },
+    "In test mode returns carry the ELSTER test marker, so the Finanzamt does not process them." : {
+
+    },
     "In the record currency" : {
       "extractionState" : "manual"
     },
@@ -429,13 +534,25 @@
     "Income tax" : {
 
     },
+    "Input Tax (Vorsteuer) Share" : {
+
+    },
     "Invoice" : {
+
+    },
+    "Ist (VAT when paid)" : {
 
     },
     "Keep Editing" : {
 
     },
     "Keep this draft for later and show the next one" : {
+
+    },
+    "Keywords" : {
+
+    },
+    "keywords, like phone*" : {
 
     },
     "Loading document…" : {
@@ -445,6 +562,9 @@
 
     },
     "Local storage was requested at launch, so nothing syncs with iCloud." : {
+
+    },
+    "Log file on this Mac" : {
 
     },
     "Looks complete" : {
@@ -462,7 +582,19 @@
     "Month" : {
 
     },
+    "Monthly" : {
+
+    },
     "More" : {
+
+    },
+    "Move Down" : {
+
+    },
+    "Move Up" : {
+
+    },
+    "Name" : {
 
     },
     "Needs attention: %@" : {
@@ -483,6 +615,9 @@
     "New Income" : {
 
     },
+    "New settings from" : {
+
+    },
     "Next" : {
 
     },
@@ -490,6 +625,9 @@
 
     },
     "No expenses in %@" : {
+
+    },
+    "No filing settings yet." : {
 
     },
     "No income in %@" : {
@@ -501,7 +639,13 @@
     "No other income, deductions, tax prepayments, trade tax or church tax; depreciation is not modeled." : {
       "extractionState" : "manual"
     },
+    "No VAT" : {
+
+    },
     "No VAT on this record." : {
+
+    },
+    "None (annual return only)" : {
 
     },
     "nonEUService" : {
@@ -522,6 +666,9 @@
 
     },
     "Not enough data for a chart yet." : {
+
+    },
+    "Not Now" : {
 
     },
     "Not signed in" : {
@@ -582,6 +729,9 @@
     "Opens the invoice" : {
 
     },
+    "Other categories" : {
+
+    },
     "Outside of the European Union" : {
       "extractionState" : "manual"
     },
@@ -603,7 +753,13 @@
     "PDFs are kept in the app's own storage on this Mac." : {
 
     },
+    "Phone" : {
+
+    },
     "Photo %lld" : {
+
+    },
+    "Postal code" : {
 
     },
     "Previous" : {
@@ -613,6 +769,9 @@
 
     },
     "Profit · %@" : {
+
+    },
+    "Quarterly" : {
 
     },
     "Queued" : {
@@ -676,6 +835,9 @@
     "Remove Record" : {
 
     },
+    "Remove These Settings" : {
+
+    },
     "Remove VAT rate" : {
 
     },
@@ -694,6 +856,9 @@
     "Required for non-EUR" : {
       "extractionState" : "manual"
     },
+    "Reset to Defaults" : {
+
+    },
     "Restore" : {
 
     },
@@ -704,6 +869,9 @@
 
     },
     "Review Drafts" : {
+
+    },
+    "Rule Actions" : {
 
     },
     "Sale type" : {
@@ -730,6 +898,12 @@
     "Search descriptions" : {
 
     },
+    "Sending" : {
+
+    },
+    "Sent with every return. The USt-IdNr is required for the Zusammenfassende Meldung." : {
+
+    },
     "Service" : {
       "extractionState" : "manual"
     },
@@ -739,6 +913,12 @@
     "Settings" : {
 
     },
+    "Settings from" : {
+
+    },
+    "Share" : {
+
+    },
     "Share PDF" : {
 
     },
@@ -746,6 +926,9 @@
 
     },
     "Show in Finder" : {
+
+    },
+    "Show Notice" : {
 
     },
     "Shown" : {
@@ -763,13 +946,25 @@
     "Solidarity surcharge" : {
 
     },
+    "Soll (VAT when invoiced)" : {
+
+    },
     "Something went wrong" : {
+
+    },
+    "Sondervorauszahlung" : {
+
+    },
+    "Steuernummer" : {
 
     },
     "Storage" : {
 
     },
     "Stored on this device only" : {
+
+    },
+    "Street" : {
 
     },
     "Suggestions for %@" : {
@@ -793,7 +988,13 @@
     "Taxable profit = net income − deductible net expenses; VAT payments and refunds are excluded." : {
       "extractionState" : "manual"
     },
+    "Taxation method" : {
+
+    },
     "Taxes to be paid · %@" : {
+
+    },
+    "Test mode" : {
 
     },
     "The app's iCloud container isn't available." : {
@@ -809,6 +1010,9 @@
 
     },
     "The document is too long to read automatically." : {
+
+    },
+    "The ELSTER library (ERiC) used for VAT returns requires BrotBooks to show you these notices from the German tax administration before first use. They are only available in German." : {
 
     },
     "The invoice's language isn't supported." : {
@@ -856,6 +1060,12 @@
     "Updated" : {
 
     },
+    "USt-IdNr" : {
+
+    },
+    "UStVA" : {
+
+    },
     "VAT" : {
 
     },
@@ -895,10 +1105,16 @@
     "View Document" : {
 
     },
+    "W-IdNr" : {
+
+    },
     "Welcome to BrotBooks" : {
 
     },
     "Year" : {
+
+    },
+    "Your Details" : {
 
     },
     "Your PDFs appear in Finder under iCloud Drive › BrotBooks." : {
@@ -908,6 +1124,12 @@
 
     },
     "Zero" : {
+
+    },
+    "ZM warning threshold" : {
+
+    },
+    "Zusammenfassende Meldung" : {
 
     }
   },

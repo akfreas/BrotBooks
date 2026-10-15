@@ -1,8 +1,5 @@
 import SwiftUI
 import BrotBooksKit
-#if os(macOS)
-import EricKit
-#endif
 
 /// Storage location and iCloud status. A `Settings` scene on macOS, a sheet on iOS.
 struct SettingsView: View {
@@ -53,9 +50,6 @@ struct SettingsView: View {
                 Text(isCloud ? "Your PDFs appear in Finder under iCloud Drive › BrotBooks." : "PDFs are kept in the app's own storage on this Mac.")
                 #endif
             }
-            #if os(macOS)
-            EricSection()
-            #endif
             Section {
                 Button("Import Sorted Export…") { afterDismiss { app.requestImport() } }
                 #if DEBUG
@@ -110,36 +104,19 @@ struct SettingsView: View {
 }
 
 #if os(macOS)
-/// The ERiC library embedded in the app: version and available UStVA plugins.
-private struct EricSection: View {
-    private let eric = EricRuntime.shared
+/// The macOS Settings window: General (`SettingsView`) and ELSTER (`ElsterSettingsView`) tabs. iOS shows
+/// `SettingsView` alone, as a sheet, without ELSTER.
+struct MacSettingsView: View {
+    /// Persisted, so a launch argument (`-settingsTab elster`) can open a tab directly.
+    @AppStorage("settingsTab") private var tab = "general"
 
     var body: some View {
-        Section("ELSTER") {
-            LabeledContent("ERiC") {
-                Text(summary)
-                    .multilineTextAlignment(.trailing)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .textSelection(.enabled)
-                    .accessibilityIdentifier("settings.eric")
+        TabView(selection: $tab) {
+            Tab("General", systemImage: "gearshape", value: "general") {
+                SettingsView()
             }
-        }
-        .task { await eric.loadVersion() }
-    }
-
-    private var summary: String {
-        switch eric.status {
-        case .notLoaded, .loading:
-            return String(localized: "Loading…")
-        case .failed(let message):
-            return String(localized: "Not available: \(message)")
-        case .ready(let info):
-            let version = info.displayVersion ?? "?"
-            let years = info.ustvaPluginYears.map(String.init)
-            switch years.count {
-            case 0: return String(localized: "ERiC \(version), no UStVA plugin")
-            case 1: return String(localized: "ERiC \(version), UStVA \(years[0]) plugin available")
-            default: return String(localized: "ERiC \(version), UStVA \(years.formatted(.list(type: .and))) plugins available")
+            Tab("ELSTER", systemImage: "building.columns", value: "elster") {
+                ElsterSettingsView()
             }
         }
     }

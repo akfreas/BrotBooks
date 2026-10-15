@@ -29,7 +29,7 @@ struct BrotBooksApp: App {
 
         #if os(macOS)
         Settings {
-            SettingsView().environment(app).tint(Theme.accent)
+            MacSettingsView().environment(app).tint(Theme.accent)
         }
         #endif
     }
