@@ -123,11 +123,15 @@ public struct TaxSettings: Sendable, Equatable {
     public var testMode: Bool
     /// Each valid from its `effectiveFrom`; kept sorted by it.
     public private(set) var periods: [TaxSettingsPeriod]
+    /// Expense categories → share of their VAT deductible as input tax.
+    public var vorsteuerShareRules: VorsteuerShareRules
 
-    public init(identity: TaxIdentity = TaxIdentity(), testMode: Bool = true, periods: [TaxSettingsPeriod]) {
+    public init(identity: TaxIdentity = TaxIdentity(), testMode: Bool = true, periods: [TaxSettingsPeriod],
+                vorsteuerShareRules: VorsteuerShareRules = .default) {
         self.identity = identity
         self.testMode = testMode
         self.periods = periods.sorted { $0.effectiveFrom < $1.effectiveFrom }
+        self.vorsteuerShareRules = vorsteuerShareRules
     }
 
     /// The seed when no profile exists: test mode on and the initial settings from 1 January 2026.
@@ -153,7 +157,8 @@ public struct TaxSettings: Sendable, Equatable {
     public func configuration(on date: String, vatRates: VatRateTable = .germany,
                               deadlines: FilingDeadlines = .germany) -> TaxConfiguration? {
         period(on: date).map {
-            TaxConfiguration(settings: $0, identity: identity, testMode: testMode, vatRates: vatRates, deadlines: deadlines)
+            TaxConfiguration(settings: $0, identity: identity, testMode: testMode, vatRates: vatRates, deadlines: deadlines,
+                             vorsteuerShareRules: vorsteuerShareRules)
         }
     }
 
@@ -172,14 +177,21 @@ public struct TaxConfiguration: Sendable, Equatable {
     public var testMode: Bool
     public var vatRates: VatRateTable
     public var deadlines: FilingDeadlines
+    /// Where each VAT treatment lands on the UStVA, by year.
+    public var ustvaForms: UStVAForms
+    /// Expense categories → share of their VAT deductible as input tax.
+    public var vorsteuerShareRules: VorsteuerShareRules
 
     public init(settings: TaxSettingsPeriod, identity: TaxIdentity = TaxIdentity(), testMode: Bool = true,
-                vatRates: VatRateTable = .germany, deadlines: FilingDeadlines = .germany) {
+                vatRates: VatRateTable = .germany, deadlines: FilingDeadlines = .germany,
+                ustvaForms: UStVAForms = .germany, vorsteuerShareRules: VorsteuerShareRules = .default) {
         self.settings = settings
         self.identity = identity
         self.testMode = testMode
         self.vatRates = vatRates
         self.deadlines = deadlines
+        self.ustvaForms = ustvaForms
+        self.vorsteuerShareRules = vorsteuerShareRules
     }
 
     public var taxationMethod: TaxationMethod { settings.taxationMethod }

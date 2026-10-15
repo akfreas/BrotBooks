@@ -24,6 +24,8 @@ public final class TaxProfile {
     public var testMode: Bool = true
     /// JSON `[TaxSettingsPeriod]`.
     public var settingsPeriods: Data?
+    /// JSON `VorsteuerShareRules`; nil while the defaults apply.
+    public var vorsteuerShareRules: Data?
     public var createdAt: Date = Date()
     public var updatedAt: Date = Date()
 
@@ -36,7 +38,9 @@ public final class TaxProfile {
             name: name ?? "", street: street ?? "", houseNumber: houseNumber ?? "", postalCode: postalCode ?? "",
             city: city ?? "", phone: phone ?? "", email: email ?? "", steuernummer: steuernummer ?? "",
             finanzamt: finanzamt ?? "", vatID: vatID ?? "")
-        return TaxSettings(identity: identity, testMode: testMode, periods: periods)
+        let rules = vorsteuerShareRules.flatMap { try? JSONDecoder().decode(VorsteuerShareRules.self, from: $0) }
+        return TaxSettings(identity: identity, testMode: testMode, periods: periods,
+                           vorsteuerShareRules: rules ?? .default)
     }
 
     /// Writes `settings` into the profile (empty identity fields are stored as nil) and bumps `updatedAt`.
@@ -57,6 +61,7 @@ public final class TaxProfile {
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys
         settingsPeriods = try? encoder.encode(settings.periods)
+        vorsteuerShareRules = settings.vorsteuerShareRules == .default ? nil : try? encoder.encode(settings.vorsteuerShareRules)
         updatedAt = Date()
     }
 

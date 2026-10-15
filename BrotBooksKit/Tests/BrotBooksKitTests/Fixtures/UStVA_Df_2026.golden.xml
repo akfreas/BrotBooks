@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Elster xmlns="http://www.elster.de/elsterxml/schema/v11">
+    <TransferHeader version="11">
+        <Verfahren>ElsterAnmeldung</Verfahren>
+        <DatenArt>UStVA</DatenArt>
+        <Vorgang>send-Auth</Vorgang>
+        <Testmerker>700000004</Testmerker>
+        <HerstellerID>27425</HerstellerID>
+        <DatenLieferant>Alois Mustermann;Testgasse;13;a;;08151;Musterstadt;Deutschland;0815/99999999;Mustermann@Geschaeft.de</DatenLieferant>
+        <Datei>
+            <Verschluesselung>CMSEncryptedData</Verschluesselung>
+            <Kompression>GZIP</Kompression>
+        </Datei>
+    </TransferHeader>
+    <DatenTeil>
+        <Nutzdatenblock>
+            <NutzdatenHeader version="11">
+                <NutzdatenTicket>1</NutzdatenTicket>
+                <Empfaenger id="F">1096</Empfaenger>
+                <Hersteller>
+                    <ProduktName>BrotBooks</ProduktName>
+                    <ProduktVersion>1.0</ProduktVersion>
+                </Hersteller>
+            </NutzdatenHeader>
+            <Nutzdaten>
+                <Anmeldungssteuern xmlns="http://finkonsens.de/elster/elsteranmeldung/ustva/v2026" version="2026">
+                    <Erstellungsdatum>20260405</Erstellungsdatum>
+                    <DatenLieferant>
+                        <Name>Alois Mustermann</Name>
+                        <Strasse>Testgasse 13a</Strasse>
+                        <PLZ>08151</PLZ>
+                        <Ort>Musterstadt</Ort>
+                        <Telefon>0815/99999999</Telefon>
+                        <Email>Mustermann@Geschaeft.de</Email>
+                    </DatenLieferant>
+                    <Steuerfall>
+                        <Unternehmer>
+                            <Name>Alois Mustermann</Name>
+                            <Str>Testgasse</Str>
+                            <Hausnummer>13</Hausnummer>
+                            <HNrZusatz>a</HNrZusatz>
+                            <Ort>Musterstadt</Ort>
+                            <PLZ>08151</PLZ>
+                            <Telefon>0815/99999999</Telefon>
+                            <Email>Mustermann@Geschaeft.de</Email>
+                        </Unternehmer>
+                        <Dauerfristverlaengerung>
+                            <Jahr>2026</Jahr>
+                            <Steuernummer>1096081508187</Steuernummer>
+                            <Kz09>27425</Kz09>
+                        </Dauerfristverlaengerung>
+                    </Steuerfall>
+                </Anmeldungssteuern>
+            </Nutzdaten>
+        </Nutzdatenblock>
+    </DatenTeil>
+</Elster>
