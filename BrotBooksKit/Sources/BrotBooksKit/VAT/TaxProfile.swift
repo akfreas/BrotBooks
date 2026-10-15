@@ -21,6 +21,10 @@ public final class TaxProfile {
     public var finanzamt: String?
     /// USt-IdNr.
     public var vatID: String?
+    /// Wirtschafts-Identifikationsnummer as entered.
+    public var wIdNr: String?
+    /// The Steuernummer in the regional notation of the Finanzamt's letters, as entered.
+    public var steuernummerRegional: String?
     public var testMode: Bool = true
     /// JSON `[TaxSettingsPeriod]`.
     public var settingsPeriods: Data?
@@ -37,7 +41,8 @@ public final class TaxProfile {
         let identity = TaxIdentity(
             name: name ?? "", street: street ?? "", houseNumber: houseNumber ?? "", postalCode: postalCode ?? "",
             city: city ?? "", phone: phone ?? "", email: email ?? "", steuernummer: steuernummer ?? "",
-            finanzamt: finanzamt ?? "", vatID: vatID ?? "")
+            finanzamt: finanzamt ?? "", vatID: vatID ?? "", wIdNr: wIdNr ?? "",
+            steuernummerRegional: steuernummerRegional ?? "")
         let rules = vorsteuerShareRules.flatMap { try? JSONDecoder().decode(VorsteuerShareRules.self, from: $0) }
         return TaxSettings(identity: identity, testMode: testMode, periods: periods,
                            vorsteuerShareRules: rules ?? .default)
@@ -57,6 +62,8 @@ public final class TaxProfile {
         steuernummer = stored(i.steuernummer)
         finanzamt = stored(i.finanzamt)
         vatID = stored(i.vatID)
+        wIdNr = stored(i.wIdNr)
+        steuernummerRegional = stored(i.steuernummerRegional)
         testMode = settings.testMode
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys

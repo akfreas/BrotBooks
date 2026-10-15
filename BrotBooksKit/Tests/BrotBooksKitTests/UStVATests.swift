@@ -8,7 +8,7 @@ enum UStVAFixtures {
     static let identity = TaxIdentity(
         name: "Alois Mustermann", street: "Testgasse", houseNumber: "13a", postalCode: "08151", city: "Musterstadt",
         phone: "0815/99999999", email: "Mustermann@Geschaeft.de", steuernummer: "1096081508187", finanzamt: "1096",
-        vatID: "DE123456789")
+        vatID: "DE123456789", wIdNr: "DE123456788-00001")
 
     static let header = UStVAXML.Header(herstellerID: "27425", produktVersion: "1.0", erstellungsdatum: "20260405")
 
@@ -439,6 +439,25 @@ enum UStVAFixtures {
         #expect(test.contains("<Testmerker>700000004</Testmerker>"))
         #expect(!production.contains("Testmerker"))
         #expect(test.replacingOccurrences(of: "        <Testmerker>700000004</Testmerker>\n", with: "") == production)
+    }
+
+    /// The W-IdNr. follows the Steuernummer in all three documents, without its suffix; it is left out when empty
+    /// or malformed.
+    @Test func wIdNrFollowsTheSteuernummer() {
+        let line = "<Steuernummer>1096081508187</Steuernummer>\n                            <WIdNr>DE123456788</WIdNr>\n"
+        let config = F.configuration()
+        #expect(UStVAXML.build(period: .month(2026, 1), kennzahlen: sampleKennzahlen(), configuration: config,
+                               header: F.header).contains(line))
+        #expect(UStVAXML.buildSondervorauszahlung(year: 2026, amount: 100, configuration: config, header: F.header)
+            .contains(line))
+        #expect(UStVAXML.buildDauerfristverlaengerung(year: 2026, configuration: config, header: F.header)
+            .contains(line))
+        for wIdNr in ["", "DE12345"] {
+            var without = config
+            without.identity.wIdNr = wIdNr
+            #expect(!UStVAXML.build(period: .month(2026, 1), kennzahlen: sampleKennzahlen(), configuration: without,
+                                    header: F.header).contains("WIdNr"))
+        }
     }
 
     @Test func namespaceAndVersionFollowTheYear() {

@@ -99,10 +99,15 @@ public struct TaxIdentity: Sendable, Equatable, Hashable, Codable {
     public var finanzamt: String
     /// USt-IdNr, e.g. "DE123456789".
     public var vatID: String
+    /// Wirtschafts-Identifikationsnummer as entered, e.g. "DE123456788" or "DE123456788-00001" (see `WIdNr`).
+    public var wIdNr: String
+    /// The Steuernummer as it appears on the Finanzamt's letters (e.g. "21/815/08150"), kept to show it again;
+    /// `steuernummer` holds the converted ELSTER format.
+    public var steuernummerRegional: String
 
     public init(name: String = "", street: String = "", houseNumber: String = "", postalCode: String = "",
                 city: String = "", phone: String = "", email: String = "", steuernummer: String = "",
-                finanzamt: String = "", vatID: String = "") {
+                finanzamt: String = "", vatID: String = "", wIdNr: String = "", steuernummerRegional: String = "") {
         self.name = name
         self.street = street
         self.houseNumber = houseNumber
@@ -113,6 +118,28 @@ public struct TaxIdentity: Sendable, Equatable, Hashable, Codable {
         self.steuernummer = steuernummer
         self.finanzamt = finanzamt
         self.vatID = vatID
+        self.wIdNr = wIdNr
+        self.steuernummerRegional = steuernummerRegional
+    }
+}
+
+/// The Wirtschafts-Identifikationsnummer (W-IdNr.): `DE`, nine digits (the last a check digit) and an optional
+/// distinguishing suffix `-NNNNN` starting at 00001 (EHB 6.3.5).
+public enum WIdNr {
+    /// Uppercased, with spaces removed.
+    public static func normalized(_ text: String) -> String {
+        text.uppercased().filter { !$0.isWhitespace }
+    }
+
+    /// `text` has the W-IdNr. format (the check digit is not verified).
+    public static func isWellFormed(_ text: String) -> Bool {
+        normalized(text).wholeMatch(of: /DE[0-9]{9}(-[0-9]{5})?/) != nil
+    }
+
+    /// The part the UStVA schema accepts (`DE[0-9]{9}`, without the suffix), or nil when `text` is not well formed.
+    public static func base(_ text: String) -> String? {
+        guard isWellFormed(text) else { return nil }
+        return String(normalized(text).prefix(11))
     }
 }
 

@@ -37,8 +37,7 @@ public enum UStVAXML {
         let form = kennzahlen.form
         var fields: [(String, String)] = [
             ("Jahr", String(period.year)), ("Zeitraum", period.zeitraum),
-            ("Steuernummer", configuration.identity.steuernummer), ("Kz09", header.herstellerID),
-        ]
+        ] + taxNumbers(configuration) + [("Kz09", header.herstellerID)]
         for number in form.elementOrder {
             if UStVAFlags.numbers.contains(where: { $0.number == number }) {
                 if flags.contains(number: number) { fields.append(("Kz\(number)", "1")) }
@@ -55,10 +54,8 @@ public enum UStVAXML {
     public static func buildSondervorauszahlung(year: Int, amount: Decimal, flags: UStVAFlags = [],
                                                 configuration: TaxConfiguration, header: Header) -> String {
         let form = configuration.ustvaForms.form(for: year)
-        var fields: [(String, String)] = [
-            ("Jahr", String(year)), ("Steuernummer", configuration.identity.steuernummer),
-            ("Kz09", header.herstellerID),
-        ]
+        var fields: [(String, String)] = [("Jahr", String(year))] + taxNumbers(configuration)
+            + [("Kz09", header.herstellerID)]
         for number in form.sondervorauszahlungElementOrder {
             if UStVAFlags.numbers.contains(where: { $0.number == number }) {
                 if flags.contains(number: number) { fields.append(("Kz\(number)", "1")) }
@@ -76,9 +73,16 @@ public enum UStVAXML {
     public static func buildDauerfristverlaengerung(year: Int, configuration: TaxConfiguration,
                                                     header: Header) -> String {
         document(year: year, steuerfall: "Dauerfristverlaengerung",
-                 fields: [("Jahr", String(year)), ("Steuernummer", configuration.identity.steuernummer),
-                          ("Kz09", header.herstellerID)],
+                 fields: [("Jahr", String(year))] + taxNumbers(configuration) + [("Kz09", header.herstellerID)],
                  configuration: configuration, header: header)
+    }
+
+    /// `Steuernummer`, then `WIdNr` when a well-formed W-IdNr. is configured. The schema takes only `DE` plus nine
+    /// digits, so a distinguishing suffix (`-00001`) is left out.
+    static func taxNumbers(_ configuration: TaxConfiguration) -> [(String, String)] {
+        var fields = [("Steuernummer", configuration.identity.steuernummer)]
+        if let wIdNr = WIdNr.base(configuration.identity.wIdNr) { fields.append(("WIdNr", wIdNr)) }
+        return fields
     }
 
     // MARK: Document

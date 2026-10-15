@@ -98,6 +98,18 @@ import Testing
         #expect(Sondervorauszahlung.computed(priorYearKz83Total: -1_500, priorYearSondervorauszahlung: 1_000) == 0)
     }
 
+    @Test func wIdNrFormat() {
+        #expect(WIdNr.isWellFormed("DE123456788"))
+        #expect(WIdNr.isWellFormed("de 123456788-00001"))
+        #expect(!WIdNr.isWellFormed("DE12345678"))
+        #expect(!WIdNr.isWellFormed("DE123456788-1"))
+        #expect(!WIdNr.isWellFormed("AT123456788"))
+        #expect(!WIdNr.isWellFormed(""))
+        #expect(WIdNr.base("DE123456788-00001") == "DE123456788")
+        #expect(WIdNr.base(" de123456788 ") == "DE123456788")
+        #expect(WIdNr.base("DE1234") == nil)
+    }
+
     @Test func zmThresholdWarnsOnlyForQuarterlyZMAboveTheThreshold() {
         let quarterly = TaxConfiguration(settings: TaxSettingsPeriod(effectiveFrom: "2026-01-01", zmFrequency: .quarterly))
         let monthly = TaxConfiguration(settings: .initial())
@@ -272,7 +284,8 @@ import Testing
         var settings = TaxSettings.initial
         settings.identity = TaxIdentity(name: "Alex Freas", street: "Brotstraße", houseNumber: "12a", postalCode: "10115",
                                         city: "Berlin", phone: "+49 30 123", email: "alex@example.com",
-                                        steuernummer: "1121081508150", finanzamt: "1121", vatID: "DE123456789")
+                                        steuernummer: "1121081508150", finanzamt: "1121", vatID: "DE123456789",
+                                        wIdNr: "DE123456788-00001", steuernummerRegional: "21/815/08150")
         settings.testMode = false
         settings.set(TaxSettingsPeriod(effectiveFrom: "2027-01-01", taxationMethod: .ist, ustvaFrequency: .quarterly,
                                        dauerfristverlaengerung: false, sondervorauszahlungOverride: dec("1550.10"),
@@ -283,6 +296,8 @@ import Testing
 
         let profile = try #require(try TaxProfile.current(in: context))
         #expect(profile.steuernummer == "1121081508150")
+        #expect(profile.wIdNr == "DE123456788-00001")
+        #expect(profile.steuernummerRegional == "21/815/08150")
         #expect(profile.testMode == false)
         var cleared = settings
         cleared.identity.phone = ""
