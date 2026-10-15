@@ -21,6 +21,20 @@ final class EricRuntime {
     let service = EricService.bundled()
     private(set) var status = Status.notLoaded
 
+    /// The loaded version, once `loadVersion()` succeeded.
+    var version: EricVersionInfo? {
+        if case .ready(let info) = status { return info }
+        return nil
+    }
+
+    /// The ELSTER Hersteller-ID from Info.plist (`ElsterHerstellerID`, set from `ELSTER_HERSTELLER_ID` in
+    /// Config/BrotBooks.xcconfig); nil when it is missing.
+    static var herstellerID: String? {
+        guard let id = Bundle.main.object(forInfoDictionaryKey: "ElsterHerstellerID") as? String,
+              !id.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
+        return id
+    }
+
     private let log = Logger(subsystem: "me.freas.BrotBooks", category: "ERiC")
 
     private init() {
