@@ -5,12 +5,19 @@ import BrotBooksKit
 
 enum Destination: Hashable, CaseIterable {
     case dashboard, income, expenses
+    #if os(macOS)
+    /// UStVA returns via ELSTER (macOS only).
+    case vatReturns
+    #endif
 
     var title: LocalizedStringKey {
         switch self {
         case .dashboard: "Dashboard"
         case .income: "Income"
         case .expenses: "Expenses"
+        #if os(macOS)
+        case .vatReturns: "VAT Returns"
+        #endif
         }
     }
 
@@ -19,6 +26,9 @@ enum Destination: Hashable, CaseIterable {
         case .dashboard: "square.grid.2x2"
         case .income: "arrow.down.left.circle"
         case .expenses: "arrow.up.right.circle"
+        #if os(macOS)
+        case .vatReturns: "building.columns"
+        #endif
         }
     }
 }
@@ -137,7 +147,7 @@ extension RootView {
 /// Mac and iPad: sidebar + detail.
 struct SplitRoot: View {
     @Environment(AppModel.self) private var app
-    @State private var selection: Destination? = .dashboard
+    @State private var selection: Destination? = LaunchOptions.startDestination ?? .dashboard
 
     var body: some View {
         @Bindable var app = app
@@ -179,6 +189,9 @@ struct SplitRoot: View {
                     case .dashboard: DashboardView()
                     case .income: RecordsScreen(kind: .income)
                     case .expenses: RecordsScreen(kind: .expenses)
+                    #if os(macOS)
+                    case .vatReturns: VatReturnsView()
+                    #endif
                     }
                 }
                 // Record screens have their own New button; the dashboard's menu offers both kinds.
@@ -234,6 +247,9 @@ extension Destination {
         case .dashboard: "dashboard"
         case .income: "income"
         case .expenses: "expenses"
+        #if os(macOS)
+        case .vatReturns: "vatReturns"
+        #endif
         }
     }
 }

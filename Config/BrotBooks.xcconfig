@@ -29,7 +29,7 @@ CODE_SIGN_STYLE = Automatic
 CODE_SIGN_ENTITLEMENTS[sdk=macosx*] = Config/BrotBooks-macOS.entitlements
 CODE_SIGN_ENTITLEMENTS[sdk=iphone*] = Config/BrotBooks-iOS.entitlements
 ENABLE_APP_SANDBOX = YES
-ENABLE_USER_SELECTED_FILES = readonly
+ENABLE_USER_SELECTED_FILES = readwrite
 ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES
 ENABLE_HARDENED_RUNTIME[sdk=macosx*] = YES
 

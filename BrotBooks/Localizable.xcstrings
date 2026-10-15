@@ -19,6 +19,309 @@
     "%lld of %lld files" : {
 
     },
+    "With monthly returns, filing the Sondervorauszahlung is also the application for the Dauerfristverlängerung: each return is then due one month later." : {
+
+    },
+    "Warnings" : {
+
+    },
+    "Validating…" : {
+
+    },
+    "Validate" : {
+
+    },
+    "VAT treatment not confirmed – the suggestion is used" : {
+
+    },
+    "VAT payable (negative: refund)" : {
+
+    },
+    "VAT on sales at other rates" : {
+
+    },
+    "VAT on reverse charge, other services" : {
+
+    },
+    "VAT on reverse charge, EU services" : {
+
+    },
+    "VAT on EU acquisitions at other rates" : {
+
+    },
+    "VAT Returns" : {
+
+    },
+    "The app has no ELSTER Hersteller-ID." : {
+
+    },
+    "The Sondervorauszahlung entered in the ELSTER settings." : {
+
+    },
+    "The Sondervorauszahlung credit (Kz39) can't be computed until last year's filings are recorded, so it is left out. Enter the amount in the ELSTER settings." : {
+
+    },
+    "The Sondervorauszahlung (1/11 of last year's advance payments) can't be computed until last year's filings are recorded. Enter the amount in the ELSTER settings." : {
+
+    },
+    "Suggested: %@" : {
+
+    },
+    "Suggested from each record's region, VAT and customer details. Goods or service can't be told from the record: check those before confirming." : {
+
+    },
+    "Special advance payment" : {
+
+    },
+    "Sondervorauszahlung credited" : {
+
+    },
+    "Sondervorauszahlung %@" : {
+
+    },
+    "Show this Kennzahl" : {
+
+    },
+    "Show ^[%lld more](inflect: true)" : {
+
+    },
+    "Send…" : {
+
+    },
+    "Sending is blocked until every record in this period has a confirmed VAT treatment." : {
+
+    },
+    "Sending comes in a later version." : {
+
+    },
+    "Select a Return" : {
+
+    },
+    "Select All" : {
+
+    },
+    "Save…" : {
+
+    },
+    "Sales not taxable in Germany" : {
+
+    },
+    "Sales at the standard rate (net)" : {
+
+    },
+    "Sales at the reduced rate (net)" : {
+
+    },
+    "Sales at other rates (net)" : {
+
+    },
+    "Review VAT Treatments" : {
+
+    },
+    "Review Treatments…" : {
+
+    },
+    "Reverse charge, other services (net)" : {
+
+    },
+    "Reverse charge, EU services (net)" : {
+
+    },
+    "Return %@" : {
+
+    },
+    "Quarterly UStVA" : {
+
+    },
+    "Q%lld %@" : {
+
+    },
+    "Preview PDF" : {
+
+    },
+    "Preparing preview…" : {
+
+    },
+    "Overdue" : {
+
+    },
+    "Other…" : {
+
+    },
+    "Or: %@" : {
+
+    },
+    "Options" : {
+
+    },
+    "Open Record…" : {
+
+    },
+    "Open ELSTER Settings" : {
+
+    },
+    "Offset a refund or refund assigned (Kz29)" : {
+
+    },
+    "Not paid yet – left out under cash accounting (Ist)" : {
+
+    },
+    "Not due" : {
+
+    },
+    "Not confirmed. Or: %@" : {
+
+    },
+    "Not confirmed." : {
+
+    },
+    "No returns: the filing settings have no UStVA periods for these years." : {
+
+    },
+    "No VAT rate on a domestic record – nothing reported" : {
+
+    },
+    "No VAT rate known for the record date – no VAT computed" : {
+
+    },
+    "Monthly UStVA" : {
+
+    },
+    "Kennzahlen" : {
+
+    },
+    "Input VAT on EU acquisitions" : {
+
+    },
+    "Input VAT from reverse charge" : {
+
+    },
+    "Input VAT from invoices" : {
+
+    },
+    "Import VAT" : {
+
+    },
+    "Foreign currency without a conversion rate – left out" : {
+
+    },
+    "Filed (test)" : {
+
+    },
+    "Filed" : {
+
+    },
+    "Extension of the filing deadline" : {
+
+    },
+    "Exports and other tax-free sales" : {
+
+    },
+    "Every record in the open periods has a confirmed VAT treatment." : {
+
+    },
+    "Enter your name in the ELSTER settings." : {
+
+    },
+    "Enter the Sondervorauszahlung in the ELSTER settings." : {
+
+    },
+    "Enter and check your Steuernummer in the ELSTER settings." : {
+
+    },
+    "EU services to businesses (customer liable)" : {
+
+    },
+    "EU deliveries of goods to businesses" : {
+
+    },
+    "EU business customer without a VAT ID" : {
+
+    },
+    "EU business customer VAT ID doesn't look valid" : {
+
+    },
+    "EU acquisitions at the standard rate (net)" : {
+
+    },
+    "EU acquisitions at the reduced rate (net)" : {
+
+    },
+    "EU acquisitions at other rates (net)" : {
+
+    },
+    "ERiC reported an error" : {
+
+    },
+    "ERiC found no errors." : {
+
+    },
+    "ERiC found no errors, but has hints." : {
+
+    },
+    "ERiC found ^[%lld error](inflect: true)." : {
+
+    },
+    "Due today" : {
+
+    },
+    "Due in ^[%lld day](inflect: true)" : {
+
+    },
+    "Due %@" : {
+
+    },
+    "Draft in this period – it counts only once approved" : {
+
+    },
+    "Don't use the direct debit mandate (Kz26)" : {
+
+    },
+    "Documents submitted separately (Kz22)" : {
+
+    },
+    "Dauerfristverlängerung application: with quarterly returns, apply once by the due date of the first return it should extend. Each return is then due one month later. No Sondervorauszahlung is owed." : {
+
+    },
+    "Dauerfristverlängerung application %@" : {
+
+    },
+    "Couldn't load the VAT returns" : {
+
+    },
+    "Corrected return (Kz10)" : {
+
+    },
+    "Confirm the VAT treatment of every record in this period first. Sending comes in a later version." : {
+
+    },
+    "Confirm Selected (%lld)" : {
+
+    },
+    "Confirm" : {
+
+    },
+    "Computed from the paired Kennzahl." : {
+
+    },
+    "Computed from the other Kennzahlen." : {
+
+    },
+    "Close" : {
+
+    },
+    "Choose your Finanzamt in the ELSTER settings." : {
+
+    },
+    "Choose a period to see its Kennzahlen, warnings and checks." : {
+
+    },
+    "Bases are cut to whole euros; taxes keep their cents. Select a row to see its records." : {
+
+    },
+    "All Treatments Confirmed" : {
+
+    },
     "^[%lld draft](inflect: true) not approved" : {
 
     },
@@ -29,6 +332,9 @@
 
     },
     "^[%lld record](inflect: true)" : {
+
+    },
+    "^[%lld record](inflect: true) with an unconfirmed VAT treatment" : {
 
     },
     "^[%lld row](inflect: true)" : {
@@ -239,6 +545,9 @@
 
     },
     "Documents to copy" : {
+
+    },
+    "^[%lld warning](inflect: true)" : {
 
     },
     "domestic" : {

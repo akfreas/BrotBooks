@@ -10,6 +10,7 @@ import BrotBooksKit
 /// - `-uiTestingEmpty YES`: with `-uiTesting`, start with no records (first-run state).
 /// - `-fixedToday YYYY-MM-DD`: pin "today" (defaults to 2026-10-10 under `-uiTesting`).
 /// - `-uiAppearance dark|light`: force the color scheme.
+/// - `-startDestination <identifier>`: open this sidebar destination (e.g. `vatReturns`) instead of the dashboard.
 /// - `UITEST_SORTED_EXPORT` environment variable: a base64 zip that stands in for the file picker, so the import
 ///   menu item opens the preview with that file (with `UITEST_SORTED_EXPORT_NAME` as its filename).
 /// - `UITEST_INVOICES` environment variable: a JSON array of `{"name": "<filename>", "data": "<base64>"}` that stands
@@ -52,6 +53,16 @@ enum LaunchOptions {
         case "light": .light
         default: nil
         }
+        #else
+        nil
+        #endif
+    }
+
+    /// The sidebar destination to start on, by its identifier (`Destination.identifier`).
+    static var startDestination: Destination? {
+        #if DEBUG
+        guard let name = UserDefaults.standard.string(forKey: "startDestination") else { return nil }
+        return Destination.allCases.first { $0.identifier == name }
         #else
         nil
         #endif
