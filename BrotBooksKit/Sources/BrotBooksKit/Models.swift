@@ -248,6 +248,6 @@ extension LedgerRecord {
 }
 
 public enum StoreSchema {
-    public static let models: [any PersistentModel.Type] = [Expense.self, Income.self]
+    public static let models: [any PersistentModel.Type] = [Expense.self, Income.self, TaxProfile.self]
     public static var schema: Schema { Schema(models) }
 }
