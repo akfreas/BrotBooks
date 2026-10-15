@@ -11,6 +11,11 @@ import BrotBooksKit
 /// `-snapshotVat YES` (with `-uiTesting YES -startDestination vatReturns`) seeds a test filer identity into the
 /// in-memory tax profile and captures the VAT returns list, a month's detail, its validation, the preview sheet
 /// and the treatment review list.
+/// `-snapshotSend YES` (with `-uiTesting YES -startDestination vatReturns -elsterTransport stub`) confirms the
+/// treatments of a month, validates it and captures the send confirmation, the stub's success and rejection
+/// results, and the list after marking the past returns as filed elsewhere. Nothing is sent: the stub answers.
+/// With `-snapshotSettings YES -settingsTab elster`, `-snapshotCertificate <pfx> -snapshotCertificatePIN <pin>`
+/// imports that certificate into the `-uiTesting` Keychain items first and removes it again afterwards.
 @MainActor
 enum SnapshotAgent {
     private static let log = Logger(subsystem: "me.freas.BrotBooks", category: "snapshot")
@@ -18,9 +23,11 @@ enum SnapshotAgent {
     static var enabled: Bool { UserDefaults.standard.bool(forKey: "snapshot") }
     static var settingsEnabled: Bool { UserDefaults.standard.bool(forKey: "snapshotSettings") }
     static var vatEnabled: Bool { UserDefaults.standard.bool(forKey: "snapshotVat") }
+    static var sendEnabled: Bool { UserDefaults.standard.bool(forKey: "snapshotSend") }
 
     static func run(app: AppModel, openSettings: () -> Void) async {
         if settingsEnabled { return await runSettings(openSettings: openSettings) }
+        if sendEnabled { return await runSend(app: app) }
         if vatEnabled { return await runVat(app: app) }
         guard enabled else { return }
         let dir = snapshotDirectory
@@ -53,6 +60,18 @@ enum SnapshotAgent {
         let dir = snapshotDirectory
         let tab = UserDefaults.standard.string(forKey: "settingsTab") ?? "general"
         try? await Task.sleep(for: .seconds(1))
+        let credentials = ElsterCredentials.shared
+        var importedCertificate = false
+        if LaunchOptions.uiTesting, let path = UserDefaults.standard.string(forKey: "snapshotCertificate"),
+           let data = FileManager.default.contents(atPath: path) {
+            let pin = UserDefaults.standard.string(forKey: "snapshotCertificatePIN") ?? ""
+            do {
+                _ = try await credentials.importCertificate(data, pin: pin)
+                importedCertificate = true
+            } catch {
+                log.error("Importing the snapshot certificate failed: \(ElsterCredentials.message(error), privacy: .public)")
+            }
+        }
         openSettings()
         for appearance in [NSAppearance.Name.aqua, .darkAqua] {
             NSApp.appearance = NSAppearance(named: appearance)
@@ -66,6 +85,7 @@ enum SnapshotAgent {
                 capture(sheet, to: dir.appendingPathComponent("settings-\(tab)-sheet-\(suffix).png"))
             }
         }
+        if importedCertificate { try? credentials.remove() }
         log.notice("Settings snapshots written to \(dir.path, privacy: .public)")
         NSApp.terminate(nil)
     }
@@ -139,6 +159,54 @@ enum SnapshotAgent {
             app.editor = nil
         }
         log.notice("VAT snapshots written to \(dir.path, privacy: .public)")
+        NSApp.terminate(nil)
+    }
+
+    private static func runSend(app: AppModel) async {
+        let dir = snapshotDirectory
+        seedTestIdentity(app: app)
+        let model = VatReturnsModel.shared
+        try? await Task.sleep(for: .seconds(3))
+        model.reload(app)
+        let window = { NSApp.mainWindow ?? NSApp.windows.first { $0.isVisible && !$0.isSheet } }
+        let sheet = { NSApp.windows.first { $0.isSheet && $0.isVisible } ?? window()?.attachedSheet }
+
+        let month = UserDefaults.standard.string(forKey: "snapshotVatPeriod") ?? "2026-09"
+        model.selection = month
+        // Confirm the suggested treatments of the month so it may be sent.
+        let choices = model.review.filter { $0.period.description == month }
+            .map { (uid: $0.recordUID, treatment: $0.suggestion.treatment) }
+        model.confirm(choices, app: app)
+        try? await Task.sleep(for: .seconds(1))
+        model.reload(app)
+        guard let item = model.selectedItem else {
+            log.error("No item \(month, privacy: .public)")
+            NSApp.terminate(nil)
+            return
+        }
+        await model.validate(item)
+        try? await Task.sleep(for: .seconds(1))
+        log.notice("Send blockers: \(String(describing: model.sendBlockers(item)), privacy: .public)")
+        capture(window(), to: dir.appendingPathComponent("send-detail.png"))
+
+        for scenario in ["success", "rejected"] {
+            UserDefaults.standard.set(scenario, forKey: "elsterStubScenario")
+            guard let current = model.items.first(where: { $0.id == month }) else { break }
+            model.beginSend(current)
+            try? await Task.sleep(for: .seconds(1.5))
+            if scenario == "success" { capture(sheet(), to: dir.appendingPathComponent("send-confirm.png")) }
+            await model.send(current)
+            try? await Task.sleep(for: .seconds(1.5))
+            capture(sheet(), to: dir.appendingPathComponent("send-result-\(scenario).png"))
+            model.sendSession = nil
+            try? await Task.sleep(for: .seconds(1))
+        }
+
+        model.markPastFiledElsewhere(year: ISODate.year(app.today) ?? 2026)
+        model.selection = month
+        try? await Task.sleep(for: .seconds(1.5))
+        capture(window(), to: dir.appendingPathComponent("send-list.png"))
+        log.notice("Send snapshots written to \(dir.path, privacy: .public)")
         NSApp.terminate(nil)
     }
 
