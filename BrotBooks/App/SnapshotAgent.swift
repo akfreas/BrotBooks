@@ -14,6 +14,10 @@ import BrotBooksKit
 /// `-snapshotSend YES` (with `-uiTesting YES -startDestination vatReturns -elsterTransport stub`) confirms the
 /// treatments of a month, validates it and captures the send confirmation, the stub's success and rejection
 /// results, and the list after marking the past returns as filed elsewhere. Nothing is sent: the stub answers.
+/// `-snapshotZM YES` (with `-uiTesting YES -startDestination vatReturns -elsterTransport stub`) adds EU sales to
+/// businesses for July–September to the sample data and captures the list with the ZM next to the UStVA, a ZM's
+/// lines and consistency, its validation, the stub's send result, and the threshold warning after switching the
+/// in-memory settings to quarterly ZM. Nothing is sent: the stub answers.
 /// With `-snapshotSettings YES -settingsTab elster`, `-snapshotCertificate <pfx> -snapshotCertificatePIN <pin>`
 /// imports that certificate into the `-uiTesting` Keychain items first and removes it again afterwards.
 @MainActor
@@ -24,10 +28,12 @@ enum SnapshotAgent {
     static var settingsEnabled: Bool { UserDefaults.standard.bool(forKey: "snapshotSettings") }
     static var vatEnabled: Bool { UserDefaults.standard.bool(forKey: "snapshotVat") }
     static var sendEnabled: Bool { UserDefaults.standard.bool(forKey: "snapshotSend") }
+    static var zmEnabled: Bool { UserDefaults.standard.bool(forKey: "snapshotZM") }
 
     static func run(app: AppModel, openSettings: () -> Void) async {
         if settingsEnabled { return await runSettings(openSettings: openSettings) }
         if sendEnabled { return await runSend(app: app) }
+        if zmEnabled { return await runZM(app: app) }
         if vatEnabled { return await runVat(app: app) }
         guard enabled else { return }
         let dir = snapshotDirectory
@@ -90,15 +96,15 @@ enum SnapshotAgent {
         NSApp.terminate(nil)
     }
 
-    /// The test filer of the ERiC samples (Finanzamt 1096 is a test Finanzamt). Only into the in-memory store of
-    /// `-uiTesting`, never real data.
+    /// The test filer of the ERiC samples (Finanzamt 1096 is a test Finanzamt; the USt-IdNr is the ZM sample's).
+    /// Only into the in-memory store of `-uiTesting`, never real data.
     private static func seedTestIdentity(app: AppModel) {
         guard LaunchOptions.uiTesting, let context = app.storage?.container.mainContext,
               var settings = try? TaxProfile.load(in: context) else { return }
         settings.identity = TaxIdentity(name: "Alois Mustermann", street: "Testgasse", houseNumber: "13a",
                                         postalCode: "08151", city: "Musterstadt", phone: "0815/99999999",
                                         email: "mustermann@example.com", steuernummer: "1096081508187",
-                                        finanzamt: "1096", vatID: "DE123456789")
+                                        finanzamt: "1096", vatID: "DE554367942")
         try? TaxProfile.save(settings, in: context)
     }
 
@@ -207,6 +213,104 @@ enum SnapshotAgent {
         try? await Task.sleep(for: .seconds(1.5))
         capture(window(), to: dir.appendingPathComponent("send-list.png"))
         log.notice("Send snapshots written to \(dir.path, privacy: .public)")
+        NSApp.terminate(nil)
+    }
+
+    /// EU sales to businesses in July–September (goods above the €50,000 quarterly threshold), with confirmed
+    /// treatments. Only into the in-memory store of `-uiTesting`.
+    private static func seedEUSales(app: AppModel) {
+        guard LaunchOptions.uiTesting, let store = app.store else { return }
+        let sales: [(date: String, description: String, gross: String, treatment: VatTreatment, vatID: String)] = [
+            ("2026-07-14", "Wiener Werkstätten machinery", "30000", .euB2BGoods, "ATU13585627"),
+            ("2026-08-05", "Kraków Print spare parts", "22500.80", .euB2BGoods, "PL5630292567"),
+            ("2026-09-03", "Atelier Lumière consulting", "4200", .euB2BService, "FR83404833048"),
+            ("2026-09-17", "Wiener Werkstätten parts", "1850.40", .euB2BGoods, "ATU13585627"),
+            ("2026-09-24", "Nordlys ApS workshop", "980", .euB2BService, "DK13585627"),
+            ("2026-09-28", "Atelier Lumière credit note", "-200", .euB2BService, "FR83404833048"),
+        ]
+        for sale in sales {
+            do {
+                _ = try store.create(.income, fields: [
+                    "description": .text(sale.description), "date": .text(sale.date), "gross_amount": .text(sale.gross),
+                    "client_region": .text(EditForm.regions[1]), "client_vat_number": .text(sale.vatID),
+                    "vat_treatment": .text(sale.treatment.rawValue), "payment_status": .text("Paid"),
+                    "payment_date": .text(sale.date),
+                ])
+            } catch {
+                log.error("Seeding \(sale.description, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+        app.refresh()
+    }
+
+    private static func runZM(app: AppModel) async {
+        let dir = snapshotDirectory
+        seedTestIdentity(app: app)
+        try? await Task.sleep(for: .seconds(2))
+        seedEUSales(app: app)
+        let model = VatReturnsModel.shared
+        try? await Task.sleep(for: .seconds(1))
+        model.reload(app)
+        let window = { NSApp.mainWindow ?? NSApp.windows.first { $0.isVisible && !$0.isSheet } }
+        let sheet = { NSApp.windows.first { $0.isSheet && $0.isVisible } ?? window()?.attachedSheet }
+
+        // Confirm the month's sample treatments so the ZM may be sent.
+        let month = "2026-09"
+        let choices = model.review.filter { $0.period.description == month }
+            .map { (uid: $0.recordUID, treatment: $0.suggestion.treatment) }
+        model.confirm(choices, app: app)
+        try? await Task.sleep(for: .seconds(1))
+        model.reload(app)
+
+        let zm = "\(month)-zm"
+        model.selection = zm
+        try? await Task.sleep(for: .seconds(1.5))
+        capture(window(), to: dir.appendingPathComponent("zm-list.png"))
+
+        model.selectedZMLine = model.zmResults[zm]?.zmLines.first { $0.customerVatID == "FR83404833048" }
+        try? await Task.sleep(for: .seconds(1))
+        capture(window(), to: dir.appendingPathComponent("zm-detail.png"))
+        model.selectedZMLine = nil
+
+        guard let item = model.selectedItem else {
+            log.error("No item \(zm, privacy: .public)")
+            NSApp.terminate(nil)
+            return
+        }
+        await model.validate(item)
+        try? await Task.sleep(for: .seconds(1.5))
+        log.notice("ZM send blockers: \(String(describing: model.sendBlockers(item)), privacy: .public)")
+        capture(window(), to: dir.appendingPathComponent("zm-validation.png"))
+
+        UserDefaults.standard.set("success", forKey: "elsterStubScenario")
+        model.beginSend(item)
+        try? await Task.sleep(for: .seconds(1.5))
+        capture(sheet(), to: dir.appendingPathComponent("zm-send-confirm.png"))
+        await model.send(item)
+        try? await Task.sleep(for: .seconds(1.5))
+        capture(sheet(), to: dir.appendingPathComponent("zm-send-result.png"))
+        model.sendSession = nil
+        try? await Task.sleep(for: .seconds(1))
+
+        // The UStVA next to it, with the consistency check.
+        model.selection = month
+        try? await Task.sleep(for: .seconds(1.5))
+        capture(window(), to: dir.appendingPathComponent("zm-ustva.png"))
+
+        // Quarterly ZM: the third quarter's goods exceed the threshold.
+        if let context = app.storage?.container.mainContext, var settings = try? TaxProfile.load(in: context),
+           var period = settings.period(on: "2026-01-01") {
+            period.zmFrequency = .quarterly
+            settings.set(period)
+            try? TaxProfile.save(settings, in: context)
+        }
+        try? await Task.sleep(for: .seconds(1))
+        model.reload(app)
+        model.selection = "2026-43-zm"
+        try? await Task.sleep(for: .seconds(1.5))
+        capture(window(), to: dir.appendingPathComponent("zm-threshold.png"))
+
+        log.notice("ZM snapshots written to \(dir.path, privacy: .public)")
         NSApp.terminate(nil)
     }
 
