@@ -3,6 +3,7 @@
 #include <dlfcn.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
@@ -34,6 +35,10 @@ int CEricLoad(const char *libraryPath, CEricAPI *api, char *error, size_t errorS
         { "EricMtVersion", (void **)&loaded.EricMtVersion },
         { "EricMtBearbeiteVorgang", (void **)&loaded.EricMtBearbeiteVorgang },
         { "EricMtHoleFehlerText", (void **)&loaded.EricMtHoleFehlerText },
+        { "EricMtMakeElsterStnr", (void **)&loaded.EricMtMakeElsterStnr },
+        { "EricMtPruefeSteuernummer", (void **)&loaded.EricMtPruefeSteuernummer },
+        { "EricMtHoleFinanzamtLandNummern", (void **)&loaded.EricMtHoleFinanzamtLandNummern },
+        { "EricMtHoleFinanzaemter", (void **)&loaded.EricMtHoleFinanzaemter },
     };
     for (size_t i = 0; i < sizeof(symbols) / sizeof(symbols[0]); i++) {
         void *symbol = dlsym(handle, symbols[i].name);
@@ -47,4 +52,46 @@ int CEricLoad(const char *libraryPath, CEricAPI *api, char *error, size_t errorS
     *api = loaded;
     pthread_mutex_unlock(&lock);
     return 0;
+}
+
+int CEricPdfCollect(const char *pdfBezeichner, const uint8_t *pdfDaten, uint32_t pdfGroesse, void *benutzerDaten) {
+    CEricPdfCollector *collector = (CEricPdfCollector *)benutzerDaten;
+    if (collector == NULL || (pdfDaten == NULL && pdfGroesse > 0)) {
+        return -1;
+    }
+    if (collector->count == collector->capacity) {
+        size_t capacity = collector->capacity == 0 ? 2 : collector->capacity * 2;
+        CEricPdfDocument *grown = realloc(collector->documents, capacity * sizeof(CEricPdfDocument));
+        if (grown == NULL) {
+            collector->failed = 1;
+            return -1;
+        }
+        collector->documents = grown;
+        collector->capacity = capacity;
+    }
+    uint8_t *bytes = malloc(pdfGroesse > 0 ? pdfGroesse : 1);
+    char *name = strdup(pdfBezeichner != NULL ? pdfBezeichner : "");
+    if (bytes == NULL || name == NULL) {
+        free(bytes);
+        free(name);
+        collector->failed = 1;
+        return -1;
+    }
+    if (pdfGroesse > 0) {
+        memcpy(bytes, pdfDaten, pdfGroesse);
+    }
+    collector->documents[collector->count++] = (CEricPdfDocument){ name, bytes, pdfGroesse };
+    return 0;
+}
+
+void CEricPdfCollectorFree(CEricPdfCollector *collector) {
+    if (collector == NULL) {
+        return;
+    }
+    for (size_t i = 0; i < collector->count; i++) {
+        free(collector->documents[i].name);
+        free(collector->documents[i].bytes);
+    }
+    free(collector->documents);
+    *collector = (CEricPdfCollector){ 0 };
 }

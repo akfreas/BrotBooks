@@ -31,11 +31,11 @@ public enum EricError: Error, Equatable, CustomStringConvertible {
 public actor EricService {
     /// Folder holding libericapi.dylib, libericxerces.dylib, libeSigner.dylib and `plugins/`; ERiC searches it
     /// recursively for plugins.
-    public let ericDirectory: URL
+    public nonisolated let ericDirectory: URL
     /// Writable folder for eric.log.
-    public let logDirectory: URL
+    public nonisolated let logDirectory: URL
     /// Text file with the ERiC package version (scripts/vendor-eric.sh writes it).
-    public let versionFile: URL
+    public nonisolated let versionFile: URL
 
     private var api: CEricAPI?
     private var instance: EricInstanzHandle?
@@ -92,6 +92,47 @@ public actor EricService {
     /// result, as do other ERiC error codes (with `EricMtHoleFehlerText`); only failures to load or call ERiC
     /// throw.
     public func validate(xml: String, datenartVersion: String) throws(EricError) -> EricValidationResult {
+        let flags = UInt32(ERIC_VALIDIERE.rawValue | ERIC_PRUEFE_HINWEISE.rawValue)
+        return try process(xml: xml, datenartVersion: datenartVersion, flags: flags, druck: nil)
+    }
+
+    /// The footer ERiC prints on preview PDFs. Vendor text only, never tax data (EHB 5.1.5.3), at most
+    /// `ERIC_MAX_LAENGE_FUSSTEXT` (30) characters.
+    public static let previewFooter = "Erstellt mit BrotBooks"
+
+    /// Validates `xml` and renders ERiC's preview PDF (`ERIC_VALIDIERE | ERIC_DRUCKE` with `vorschau = 1`,
+    /// EBV-2); nothing is sent. The PDF comes back through `pdfCallback` into memory, so no file is written.
+    /// When validation fails ERiC prints nothing: the result then has no documents and carries the errors.
+    public func preview(xml: String, datenartVersion: String) throws(EricError) -> EricPreviewResult {
+        let collector = UnsafeMutablePointer<CEricPdfCollector>.allocate(capacity: 1)
+        collector.initialize(to: CEricPdfCollector())
+        defer {
+            CEricPdfCollectorFree(collector)
+            collector.deallocate()
+        }
+        let flags = UInt32(ERIC_VALIDIERE.rawValue | ERIC_DRUCKE.rawValue)
+        let footer = strdup(Self.previewFooter)
+        defer { free(footer) }
+        var druck = eric_druck_parameter_t(
+            version: 4, vorschau: 1, duplexDruck: 0, pdfName: nil, fussText: footer,
+            pdfCallback: CEricPdfCollect, pdfCallbackBenutzerdaten: UnsafeMutableRawPointer(collector))
+        let validation = try process(xml: xml, datenartVersion: datenartVersion, flags: flags, druck: &druck)
+        let documents = (0..<collector.pointee.count).map { index in
+            let document = collector.pointee.documents[index]
+            return EricPreviewResult.Document(
+                name: document.name.map { String(cString: $0) } ?? "",
+                data: document.bytes.map { Data(bytes: $0, count: Int(document.length)) } ?? Data())
+        }
+        if collector.pointee.failed != 0 {
+            Self.log.error("Preview PDF could not be copied (out of memory)")
+        }
+        return EricPreviewResult(validation: validation, documents: documents)
+    }
+
+    /// Runs `EricMtBearbeiteVorgang` on `xml` and reads its return buffer: rule errors and hints for
+    /// `ERIC_OK`/`ERIC_GLOBAL_PRUEF_FEHLER`/`ERIC_GLOBAL_HINWEISE`, otherwise the code with its error text.
+    private func process(xml: String, datenartVersion: String, flags: UInt32,
+                         druck: UnsafePointer<eric_druck_parameter_t>?) throws(EricError) -> EricValidationResult {
         try withInstance { api, instance throws(EricError) in
             guard let buffer = api.EricMtRueckgabepufferErzeugen(instance) else {
                 throw .callFailed(function: "EricMtRueckgabepufferErzeugen", code: -1)
@@ -102,10 +143,9 @@ public actor EricService {
             }
             defer { _ = api.EricMtRueckgabepufferFreigeben(instance, serverBuffer) }
 
-            let flags = UInt32(ERIC_VALIDIERE.rawValue | ERIC_PRUEFE_HINWEISE.rawValue)
             let code = xml.withCString { data in
                 datenartVersion.withCString { version in
-                    api.EricMtBearbeiteVorgang(instance, data, version, flags, nil, nil, buffer, serverBuffer)
+                    api.EricMtBearbeiteVorgang(instance, data, version, flags, druck, nil, buffer, serverBuffer)
                 }
             }
             let response = api.EricMtRueckgabepufferInhalt(instance, buffer).map { String(cString: $0) } ?? ""
@@ -123,6 +163,74 @@ public actor EricService {
                                             errorText: text, response: response)
             }
         }
+    }
+
+    // MARK: - Steuernummer and Finanzämter
+
+    /// Converts a Steuernummer in the regional notation of the Finanzamt's letters (e.g. `21/815/08150`) into the
+    /// 13-digit ELSTER format with `EricMtMakeElsterStnr`, which also checks the result. One of `landesnummer`
+    /// (2 digits, the first two of the Bundesfinanzamtsnummer) and `bundesfinanzamtsnummer` (4 digits) is
+    /// required; Bavarian and Berlin numbers in the format `BBB/UUUUP` need the Bundesfinanzamtsnummer.
+    /// - Throws: `.callFailed(function: "EricMtMakeElsterStnr", code:)`, e.g. with
+    ///   `ERIC_GLOBAL_STEUERNUMMER_UNGUELTIG` or `ERIC_GLOBAL_LANDESNUMMER_UNBEKANNT`; `errorText(for:)` has
+    ///   ERiC's message for the code.
+    public func makeElsterSteuernummer(_ steuernummer: String, landesnummer: String? = nil,
+                                       bundesfinanzamtsnummer: String? = nil) throws(EricError) -> String {
+        let result = try withReturnBuffer(function: "EricMtMakeElsterStnr") { api, instance, buffer in
+            steuernummer.withCString { bescheid in
+                Self.withOptionalCString(landesnummer) { land in
+                    Self.withOptionalCString(bundesfinanzamtsnummer) { bufa in
+                        api.EricMtMakeElsterStnr(instance, bescheid, land, bufa, buffer)
+                    }
+                }
+            }
+        }
+        return result.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Checks a 13-digit ELSTER Steuernummer, including its Bundesfinanzamtsnummer, with
+    /// `EricMtPruefeSteuernummer`. Returns normally when it is valid.
+    /// - Throws: `.callFailed(function: "EricMtPruefeSteuernummer", code:)`, e.g. with
+    ///   `ERIC_GLOBAL_STEUERNUMMER_UNGUELTIG`.
+    public func checkSteuernummer(_ steuernummer: String) throws(EricError) {
+        let code = try withInstance { api, instance in
+            steuernummer.withCString { api.EricMtPruefeSteuernummer(instance, $0) }
+        }
+        guard code == ERIC_OK.rawValue else { throw .callFailed(function: "EricMtPruefeSteuernummer", code: code) }
+    }
+
+    /// The Finanzamt countries (Bundesländer, plus special offices) with their 2-digit numbers
+    /// (`EricMtHoleFinanzamtLandNummern`), in ERiC's order.
+    public func bundeslaender() throws(EricError) -> [EricFinanzamtLand] {
+        let xml = try withReturnBuffer(function: "EricMtHoleFinanzamtLandNummern") { api, instance, buffer in
+            api.EricMtHoleFinanzamtLandNummern(instance, buffer)
+        }
+        guard let laender = EricFinanzamtLand.parse(xml) else {
+            throw .malformedResult(function: "EricMtHoleFinanzamtLandNummern")
+        }
+        return laender
+    }
+
+    /// The Finanzämter of a Finanzamt country (`EricMtHoleFinanzaemter`), in ERiC's order.
+    /// - Parameter landNummer: 2 digits, from `bundeslaender()`.
+    public func finanzaemter(landNummer: String) throws(EricError) -> [EricFinanzamt] {
+        let xml = try withReturnBuffer(function: "EricMtHoleFinanzaemter") { api, instance, buffer in
+            landNummer.withCString { api.EricMtHoleFinanzaemter(instance, $0, buffer) }
+        }
+        guard let finanzaemter = EricFinanzamt.parse(xml) else {
+            throw .malformedResult(function: "EricMtHoleFinanzaemter")
+        }
+        return finanzaemter
+    }
+
+    /// ERiC's message for an error `code` (`EricMtHoleFehlerText`), or nil when it has none or ERiC can't load.
+    public func errorText(for code: Int32) -> String? {
+        try? withInstance { api, instance in errorText(code, api: api, instance: instance) }
+    }
+
+    private static func withOptionalCString<T>(_ string: String?, _ body: (UnsafePointer<CChar>?) -> T) -> T {
+        guard let string, !string.isEmpty else { return body(nil) }
+        return string.withCString { body($0) }
     }
 
     /// `EricMtHoleFehlerText` for `code`, or nil when ERiC has none.

@@ -29,6 +29,12 @@ typedef int (*CEricMtBearbeiteVorgang)(EricInstanzHandle instanz, const char *da
                                        EricRueckgabepufferHandle rueckgabeXmlPuffer,
                                        EricRueckgabepufferHandle serverantwortXmlPuffer);
 typedef int (*CEricMtHoleFehlerText)(EricInstanzHandle instanz, int fehlerkode, EricRueckgabepufferHandle rueckgabePuffer);
+typedef int (*CEricMtMakeElsterStnr)(EricInstanzHandle instanz, const char *steuernrBescheid, const char *landesnr,
+                                     const char *bundesfinanzamtsnr, EricRueckgabepufferHandle steuernrPuffer);
+typedef int (*CEricMtPruefeSteuernummer)(EricInstanzHandle instanz, const char *steuernummer);
+typedef int (*CEricMtHoleFinanzamtLandNummern)(EricInstanzHandle instanz, EricRueckgabepufferHandle rueckgabeXmlPuffer);
+typedef int (*CEricMtHoleFinanzaemter)(EricInstanzHandle instanz, const char *finanzamtLandNummer,
+                                       EricRueckgabepufferHandle rueckgabeXmlPuffer);
 
 /// The resolved ERiC functions. Every field is non-NULL after a successful CEricLoad().
 typedef struct CEricAPI {
@@ -41,6 +47,10 @@ typedef struct CEricAPI {
     CEricMtVersion EricMtVersion;
     CEricMtBearbeiteVorgang EricMtBearbeiteVorgang;
     CEricMtHoleFehlerText EricMtHoleFehlerText;
+    CEricMtMakeElsterStnr EricMtMakeElsterStnr;
+    CEricMtPruefeSteuernummer EricMtPruefeSteuernummer;
+    CEricMtHoleFinanzamtLandNummern EricMtHoleFinanzamtLandNummern;
+    CEricMtHoleFinanzaemter EricMtHoleFinanzaemter;
 } CEricAPI;
 
 /// Loads libericapi.dylib from `libraryPath` (absolute, file-system representation) with
@@ -50,5 +60,31 @@ typedef struct CEricAPI {
 /// Returns 0 on success. On failure returns -1 and writes a NUL-terminated message (dlerror or the
 /// missing symbol) into `error`.
 int CEricLoad(const char *libraryPath, CEricAPI *api, char *error, size_t errorSize);
+
+// MARK: - PDF collection
+
+/// One PDF that ERiC handed to `CEricPdfCollect`. `bytes` is owned by the collector (malloc'd).
+typedef struct CEricPdfDocument {
+    char *name;
+    uint8_t *bytes;
+    uint32_t length;
+} CEricPdfDocument;
+
+/// Collects the PDFs ERiC produces when `eric_druck_parameter_t.pdfCallback` is `CEricPdfCollect` and
+/// `pdfCallbackBenutzerdaten` points to a zero-initialized collector. Free with `CEricPdfCollectorFree`.
+typedef struct CEricPdfCollector {
+    CEricPdfDocument *documents;
+    size_t count;
+    size_t capacity;
+    /// Set when copying a PDF failed (out of memory); the callback then returned non-zero.
+    int failed;
+} CEricPdfCollector;
+
+/// An `EricPdfCallback` that copies each PDF into the `CEricPdfCollector` passed as `benutzerDaten`.
+/// Returns 0, or -1 when memory runs out (ERiC then aborts and logs the code).
+int CEricPdfCollect(const char *pdfBezeichner, const uint8_t *pdfDaten, uint32_t pdfGroesse, void *benutzerDaten);
+
+/// Frees the documents of `collector` and zeroes it.
+void CEricPdfCollectorFree(CEricPdfCollector *collector);
 
 #endif /* CERIC_H_ */
