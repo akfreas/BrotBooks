@@ -75,6 +75,12 @@ struct RecordEditor: View {
 
     private func issue(_ field: String) -> RecordIssue? { issues.first { $0.field == field } }
 
+    /// The VAT treatment suggested from the current form while none is selected.
+    private var treatmentSuggestion: VatTreatment.Suggestion? {
+        EditForm.suggestedTreatment(kind, values: record?.values ?? [:], initial: record == nil ? EditForm.State() : initial,
+                                    current: form)
+    }
+
     /// Why a draft's field needs a second look (a warning or low confidence from extraction), until the user
     /// changes that field.
     private func flag(_ field: String) -> ExtractionInfo.Flag? {
@@ -102,7 +108,8 @@ struct RecordEditor: View {
             Section {
                 ForEach(EditForm.fields(kind)) { field in
                     FieldEditor(field: field, form: $form, suggestions: suggestions(for: field), issue: issue(field.name),
-                                flag: flag(field.name))
+                                flag: flag(field.name),
+                                treatmentSuggestion: field.name == "vat_treatment" ? treatmentSuggestion : nil)
                 }
             }
             vatSection
@@ -511,6 +518,8 @@ struct FieldEditor: View {
     var issue: RecordIssue?
     /// Why extraction flagged this field for a second look.
     var flag: ExtractionInfo.Flag?
+    /// "VAT treatment" while unset: the suggestion, shown in place of "—" with a Confirm button that selects it.
+    var treatmentSuggestion: VatTreatment.Suggestion?
 
     private var text: Binding<String> {
         Binding { form.text[field.name] ?? "" } set: { form.text[field.name] = $0 }
@@ -519,9 +528,10 @@ struct FieldEditor: View {
     private var identifier: String { "field.\(field.name)" }
 
     var body: some View {
-        if issue != nil || flag != nil {
+        if issue != nil || flag != nil || treatmentSuggestion != nil {
             VStack(alignment: .leading, spacing: 4) {
                 control
+                if let treatmentSuggestion { suggestionNote(treatmentSuggestion) }
                 if let issue { IssueText(issue: issue).accessibilityIdentifier("issue.\(field.name)") }
                 if let flag { FlagText(flag: flag).accessibilityIdentifier("flag.\(field.name)") }
             }
@@ -539,7 +549,11 @@ struct FieldEditor: View {
             .accessibilityIdentifier(identifier)
         case .select:
             Picker(LocalizedStringKey(field.label), selection: text) {
-                Text(verbatim: "—").tag("")
+                if let treatmentSuggestion {
+                    Text("Suggested: \(Text(LocalizedStringKey(treatmentSuggestion.treatment.rawValue)))").tag("")
+                } else {
+                    Text(verbatim: "—").tag("")
+                }
                 ForEach(field.options, id: \.self) { Text(LocalizedStringKey($0)).tag($0) }
                 if !text.wrappedValue.isEmpty && !field.options.contains(text.wrappedValue) {
                     Text(verbatim: text.wrappedValue).tag(text.wrappedValue)
@@ -560,6 +574,27 @@ struct FieldEditor: View {
             #else
             LabeledContent { fieldControls } label: { Text(LocalizedStringKey(field.label)) }
             #endif
+        }
+    }
+
+    /// Not confirmed yet (and the goods-or-service alternative), with Confirm.
+    private func suggestionNote(_ suggestion: VatTreatment.Suggestion) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Group {
+                if let alternative = suggestion.alternative {
+                    Text("Not confirmed. Or: \(Text(LocalizedStringKey(alternative.rawValue)))")
+                } else {
+                    Text("Not confirmed.")
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            Spacer(minLength: 4)
+            Button("Confirm") { text.wrappedValue = suggestion.treatment.rawValue }
+                // Bordered: in an iOS form row the default style would make the whole row the button.
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .accessibilityIdentifier("field.vat_treatment.confirm")
         }
     }
 
