@@ -1,5 +1,6 @@
 #if os(macOS)
 import BrotBooksKit
+import EricKit
 import SwiftUI
 
 /// User-facing English text for the VAT returns screen: titles, statuses, warnings and Kennzahl names.
@@ -48,7 +49,8 @@ enum VatReturnTexts {
         case .dueIn(0): return Text("Due today")
         case .dueIn(let days): return Text("Due in ^[\(days) day](inflect: true)")
         case .overdue: return Text("Overdue")
-        case .filedTest: return Text("Filed (test)")
+        case .uncertain: return Text("Check status")
+        case .filedElsewhere: return Text("Filed elsewhere")
         case .filed: return Text("Filed")
         }
     }
@@ -58,8 +60,62 @@ enum VatReturnTexts {
         case .notDue: return .secondary
         case .dueIn(let days): return days <= 14 ? Theme.amber : .secondary
         case .overdue: return Theme.bad
-        case .filedTest: return Theme.accent
+        case .uncertain: return Theme.amber
+        case .filedElsewhere: return Theme.moneyIn
         case .filed: return Theme.moneyIn
+        }
+    }
+
+    /// The title of a return by its type (e.g. one missing from the Sondervorauszahlung's basis).
+    static func titleString(_ type: VatReturnItem.ReturnType) -> String {
+        switch type {
+        case .ustva(let period): return periodTitleString(period)
+        case .sondervorauszahlung(let year): return String(localized: "Sondervorauszahlung \(String(year))")
+        case .dauerfristverlaengerung(let year):
+            return String(localized: "Dauerfristverlängerung application \(String(year))")
+        }
+    }
+
+    static func filingState(_ state: VatFiling.State?) -> Text {
+        switch state {
+        case .accepted: return Text("Accepted")
+        case .rejected: return Text("Rejected")
+        case .uncertain: return Text("Outcome unknown")
+        case .filedElsewhere: return Text("Filed elsewhere")
+        case nil: return Text(verbatim: "–")
+        }
+    }
+
+    static func filingStateTint(_ state: VatFiling.State?) -> Color {
+        switch state {
+        case .accepted, .filedElsewhere: return Theme.moneyIn
+        case .rejected: return Theme.bad
+        case .uncertain: return Theme.amber
+        case nil: return .secondary
+        }
+    }
+
+    static func sendBlocker(_ blocker: VatReturnsModel.SendBlocker) -> Text? {
+        switch blocker {
+        case .cannotBuild, .sending: return nil
+        case .unconfirmedTreatments: return Text("Confirm the VAT treatment of every record in this period first.")
+        case .noCertificate: return Text("Import your ELSTER certificate in the ELSTER settings.")
+        case .notValidated: return Text("Validate the return before sending it.")
+        case .validationFailed: return Text("Fix the errors ERiC found, then validate again.")
+        case .correctionRequired:
+            return Text("This return was already filed. To send it again, turn on Corrected return (Kz10).")
+        case .alreadyFiled: return Text("This return was already filed and can't be sent again.")
+        }
+    }
+
+    static func progressStep(_ step: EricProgress.Step?) -> Text {
+        switch step {
+        case .reading: return Text("Reading the return…")
+        case .preparing: return Text("Preparing…")
+        case .validating: return Text("Validating…")
+        case .sending: return Text("Sending to ELSTER…")
+        case .printing: return Text("Printing the protocol…")
+        case nil: return Text("Working…")
         }
     }
 

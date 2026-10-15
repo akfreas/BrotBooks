@@ -1,6 +1,309 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "A test filing never counts as filed: the return is still due for real." : {
+
+    },
+    "Accepted" : {
+
+    },
+    "Accepted by ELSTER" : {
+
+    },
+    "Accepted by ELSTER (test)" : {
+
+    },
+    "Actions for %@" : {
+
+    },
+    "Certificate" : {
+
+    },
+    "Certificate PIN" : {
+
+    },
+    "Check status" : {
+
+    },
+    "Code" : {
+
+    },
+    "Confirm the VAT treatment of every record in this period first." : {
+
+    },
+    "Corrected return" : {
+
+    },
+    "ELSTER didn't confirm the return" : {
+
+    },
+    "ELSTER test certificate" : {
+
+    },
+    "ERiC found errors" : {
+
+    },
+    "Enter the certificate's PIN." : {
+
+    },
+    "File" : {
+
+    },
+    "File with the Finanzamt" : {
+
+    },
+    "Filed elsewhere" : {
+
+    },
+    "Filed on" : {
+
+    },
+    "Filings" : {
+
+    },
+    "Fix the errors ERiC found, then validate again." : {
+
+    },
+    "For a return filed with Mein ELSTER or by your accountant. It then counts as filed, and its amount counts toward next year's Sondervorauszahlung." : {
+
+    },
+    "Holder" : {
+
+    },
+    "I checked Mein ELSTER: this return did not arrive. Send it again." : {
+
+    },
+    "I know the amount filed" : {
+
+    },
+    "I want to file this return with the Finanzamt." : {
+
+    },
+    "Import your ELSTER certificate in the ELSTER settings." : {
+
+    },
+    "Import…" : {
+
+    },
+    "Incomplete: no filing or no amount is recorded for %@. Mark them as filed elsewhere with their amounts, or enter the Sondervorauszahlung in the ELSTER settings." : {
+
+    },
+    "Issuer" : {
+
+    },
+    "Keep the app open until ELSTER answers." : {
+
+    },
+    "Keychain: %@" : {
+
+    },
+    "Kz10" : {
+
+    },
+    "Mark All Past Periods as Filed Elsewhere…" : {
+
+    },
+    "Mark ^[%lld past return](inflect: true) of %@ as filed elsewhere?" : {
+
+    },
+    "Mark as Filed" : {
+
+    },
+    "Mark as Filed Elsewhere" : {
+
+    },
+    "Mark as Filed Elsewhere…" : {
+
+    },
+    "Marked ^[%lld return](inflect: true) of %@ as filed elsewhere." : {
+
+    },
+    "Message" : {
+
+    },
+    "More Actions" : {
+
+    },
+    "No certificate is stored." : {
+
+    },
+    "No certificate yet. Import the .pfx file you use for Mein ELSTER." : {
+
+    },
+    "Not filed yet." : {
+
+    },
+    "Nothing was sent." : {
+
+    },
+    "Nothing was sent. The stored PIN was removed; enter the PIN again when you send." : {
+
+    },
+    "Nothing was sent. Unlock or renew the certificate in Mein ELSTER, then import it again." : {
+
+    },
+    "Outcome unknown" : {
+
+    },
+    "PIN" : {
+
+    },
+    "PRODUCTION" : {
+
+    },
+    "Period" : {
+
+    },
+    "Preparing…" : {
+
+    },
+    "Printing the protocol…" : {
+
+    },
+    "Protocol: %@" : {
+
+    },
+    "Reading the return…" : {
+
+    },
+    "Rejected" : {
+
+    },
+    "Rejected by ELSTER" : {
+
+    },
+    "Remove the certificate and its PIN from this Mac?" : {
+
+    },
+    "Replace…" : {
+
+    },
+    "Return" : {
+
+    },
+    "Save PIN" : {
+
+    },
+    "Send Test" : {
+
+    },
+    "Send this return to ELSTER." : {
+
+    },
+    "Send to ELSTER" : {
+
+    },
+    "Sending %@" : {
+
+    },
+    "Sending to ELSTER…" : {
+
+    },
+    "Show Protocol" : {
+
+    },
+    "Sondervorauszahlung %@: 1/11 of %@'s Kz83 total %@ plus its Sondervorauszahlung %@, from the recorded filings." : {
+
+    },
+    "Stored in the Keychain" : {
+
+    },
+    "Stub transport: nothing is sent" : {
+
+    },
+    "TEST" : {
+
+    },
+    "Test" : {
+
+    },
+    "Test mode: the return carries the ELSTER test marker, so the Finanzamt does not process it." : {
+
+    },
+    "The PIN is checked against your certificate and kept in this Mac's Keychain." : {
+
+    },
+    "The PIN is wrong" : {
+
+    },
+    "The PIN is wrong." : {
+
+    },
+    "The certificate and its PIN are kept in this Mac's Keychain only; they don't sync. Every send still asks for confirmation." : {
+
+    },
+    "The certificate expires in ^[%lld day](inflect: true). Renew it in Mein ELSTER." : {
+
+    },
+    "The certificate has expired. Renew it in Mein ELSTER and import the new file." : {
+
+    },
+    "The certificate's PIN is locked" : {
+
+    },
+    "The certificate's PIN is locked. Unlock or renew the certificate in Mein ELSTER." : {
+
+    },
+    "The file can't be used as an ELSTER certificate: %@" : {
+
+    },
+    "The filing couldn't be saved completely: %@" : {
+
+    },
+    "The last send ended without an answer from ELSTER. Check Mein ELSTER whether it arrived before sending again." : {
+
+    },
+    "The last send of this return ended without an answer from ELSTER. It may have arrived: a second return for the same period is a duplicate filing." : {
+
+    },
+    "The protocol couldn't be read: %@" : {
+
+    },
+    "The return couldn't be sent" : {
+
+    },
+    "The return may have arrived. Check Mein ELSTER before sending it again: a second return for the same period is a duplicate filing." : {
+
+    },
+    "This return was already filed and can't be sent again." : {
+
+    },
+    "This return was already filed. To send it again, turn on Corrected return (Kz10)." : {
+
+    },
+    "Ticket" : {
+
+    },
+    "Ticket %@" : {
+
+    },
+    "Undo" : {
+
+    },
+    "Undo Mark as Filed Elsewhere" : {
+
+    },
+    "Use this for returns you filed with Mein ELSTER or through an accountant. Their amounts stay unknown, so the Sondervorauszahlung computed from them is incomplete until you enter each amount." : {
+
+    },
+    "Valid" : {
+
+    },
+    "Validate the return before sending it." : {
+
+    },
+    "Verify and Save" : {
+
+    },
+    "Working…" : {
+
+    },
+    "Yes (Kz10)" : {
+
+    },
+    "date unknown" : {
+
+    },
     "%@ Choose your Finanzamt: numbers like 113/10010 need it." : {
 
     },

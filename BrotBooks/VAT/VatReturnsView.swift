@@ -38,6 +38,15 @@ struct VatReturnsView: View {
         .sheet(item: $model.preview) { document in
             PDFPreviewSheet(document: document)
         }
+        .sheet(item: $model.sendSession) { session in
+            if let item = model.items.first(where: { $0.id == session.itemID }) {
+                VatSendSheet(model: model, item: item, session: session)
+            }
+        }
+        .sheet(item: $model.markingElsewhere) { item in
+            MarkFiledElsewhereSheet(model: model, item: item)
+        }
+        .task { await ElsterCredentials.shared.load() }
         .onAppear { model.reload(app) }
         .onChange(of: app.revision) { model.reload(app) }
         .onReceive(NotificationCenter.default.publisher(for: ModelContext.didSave).receive(on: RunLoop.main)) { _ in
@@ -61,17 +70,42 @@ private struct VatReturnList: View {
                     .padding(10)
                 Divider()
             }
+            if let bulk = model.lastBulkMark {
+                HStack {
+                    Text("Marked ^[\(bulk.uids.count) return](inflect: true) of \(String(bulk.year)) as filed elsewhere.")
+                        .font(.callout)
+                    Spacer()
+                    Button("Undo") { model.undoBulkMark() }
+                        .accessibilityIdentifier("vat.bulk.undo")
+                }
+                .padding(10)
+                Divider()
+            }
             List(selection: $model.selection) {
                 ForEach(years, id: \.self) { year in
                     Section {
                         ForEach(model.items.filter { $0.year == year }) { item in
-                            VatReturnRow(item: item, status: model.status(item), result: model.results[item.id],
-                                         warnings: model.warnings(item).count)
+                            VatReturnRow(item: item, status: model.status(item), filedInTest: model.filedInTest(item),
+                                         result: model.results[item.id], warnings: model.warnings(item).count)
                                 .tag(item.id)
                                 .accessibilityIdentifier("vat.row.\(item.id)")
                         }
                     } header: {
-                        Text(verbatim: String(year))
+                        HStack {
+                            Text(verbatim: String(year))
+                            Spacer()
+                            Menu {
+                                Button("Mark All Past Periods as Filed Elsewhere…") { bulkYear = year }
+                                    .disabled(model.pastUnfiledItems(year: year).isEmpty)
+                            } label: {
+                                Image(systemName: "ellipsis.circle")
+                            }
+                            .menuStyle(.borderlessButton)
+                            .menuIndicator(.hidden)
+                            .fixedSize()
+                            .accessibilityLabel(Text("Actions for \(String(year))"))
+                            .accessibilityIdentifier("vat.year.\(year).actions")
+                        }
                     }
                 }
                 if model.items.isEmpty && model.settings != nil {
@@ -81,6 +115,23 @@ private struct VatReturnList: View {
             }
             .listStyle(.inset)
         }
+        .confirmationDialog(bulkTitle, isPresented: Binding { bulkYear != nil } set: { if !$0 { bulkYear = nil } },
+                            titleVisibility: .visible) {
+            Button("Mark as Filed Elsewhere") {
+                if let year = bulkYear { model.markPastFiledElsewhere(year: year) }
+                bulkYear = nil
+            }
+            .accessibilityIdentifier("vat.bulk.confirm")
+        } message: {
+            Text("Use this for returns you filed with Mein ELSTER or through an accountant. Their amounts stay unknown, so the Sondervorauszahlung computed from them is incomplete until you enter each amount.")
+        }
+    }
+
+    @State private var bulkYear: Int?
+
+    private var bulkTitle: Text {
+        let count = bulkYear.map { model.pastUnfiledItems(year: $0).count } ?? 0
+        return Text("Mark ^[\(count) past return](inflect: true) of \(String(bulkYear ?? 0)) as filed elsewhere?")
     }
 }
 
@@ -109,6 +160,7 @@ private struct ReviewBanner: View {
 private struct VatReturnRow: View {
     let item: VatReturnItem
     let status: VatReturnStatus
+    let filedInTest: Bool
     let result: UStVAResult?
     let warnings: Int
 
@@ -129,7 +181,13 @@ private struct VatReturnRow: View {
             }
             Spacer(minLength: 6)
             VStack(alignment: .trailing, spacing: 3) {
-                Pill(text: VatReturnTexts.status(status), tint: VatReturnTexts.statusTint(status))
+                HStack(spacing: 4) {
+                    if filedInTest && status.isOpen {
+                        Pill(text: Text("Filed (test)"), tint: Theme.accent)
+                    }
+                    Pill(text: VatReturnTexts.status(status), tint: VatReturnTexts.statusTint(status))
+                }
+                .fixedSize()
                 if let result {
                     Text(verbatim: Money.format(result.kennzahlen.kz83))
                         .font(.caption)
@@ -175,6 +233,7 @@ private struct VatReturnDetail: View {
                     sondervorauszahlungCard
                 }
                 if !item.availableFlags.isEmpty { flagsCard }
+                FilingHistoryCard(model: model, item: item)
             }
             .padding(24)
             .frame(maxWidth: 900, alignment: .leading)
@@ -192,6 +251,7 @@ private struct VatReturnDetail: View {
         let status = model.status(item)
         let blockers = model.blockers(item)
         let running = model.running[item.id]
+        let sendBlockers = model.sendBlockers(item)
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 4) {
@@ -206,6 +266,10 @@ private struct VatReturnDetail: View {
                 Spacer()
                 if item.configuration.testMode {
                     Pill(text: Text("Test mode"), tint: Theme.accent)
+                }
+                if model.filedInTest(item) && status.isOpen {
+                    Pill(text: Text("Filed (test)"), tint: Theme.accent)
+                        .accessibilityIdentifier("vat.detail.filedTest")
                 }
                 Pill(text: VatReturnTexts.status(status), tint: VatReturnTexts.statusTint(status))
                     .accessibilityIdentifier("vat.detail.status")
@@ -223,20 +287,30 @@ private struct VatReturnDetail: View {
                     Label("Preview PDF", systemImage: "doc.text.magnifyingglass")
                 }
                 .accessibilityIdentifier("vat.preview")
-                if running != nil {
+                if running == .validating || running == .previewing {
                     ProgressView().controlSize(.small)
                     Text(running == .validating ? LocalizedStringKey("Validating…") : LocalizedStringKey("Preparing preview…"))
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button {} label: { Label("Send…", systemImage: "paperplane") }
-                    .disabled(true)
-                    .help(model.blocksSending(item)
-                          ? Text("Confirm the VAT treatment of every record in this period first. Sending comes in a later version.")
-                          : Text("Sending comes in a later version."))
+                Menu {
+                    Button("Mark as Filed Elsewhere…") { model.markingElsewhere = item }
+                        .disabled(model.filingMark(for: item) == .production || model.filingMark(for: item) == .elsewhere)
+                        .accessibilityIdentifier("vat.markElsewhere")
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .accessibilityLabel(Text("More Actions"))
+                .accessibilityIdentifier("vat.moreActions")
+                Button { model.beginSend(item) } label: { Label("Send…", systemImage: "paperplane") }
+                    .disabled(!sendBlockers.isEmpty)
+                    .help(sendBlockers.compactMap(VatReturnTexts.sendBlocker).first ?? Text("Send this return to ELSTER."))
                     .accessibilityIdentifier("vat.send")
             }
-            .disabled(running != nil || !blockers.isEmpty)
+            .disabled(running != nil)
             if !blockers.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(blockers, id: \.self) { blocker in
@@ -251,6 +325,27 @@ private struct VatReturnDetail: View {
                       systemImage: "lock")
                     .font(.callout)
                     .foregroundStyle(.secondary)
+            } else {
+                let reasons = sendBlockers.compactMap(VatReturnTexts.sendBlocker)
+                if !reasons.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(Array(reasons.enumerated()), id: \.offset) { _, reason in
+                            Label { reason } icon: { Image(systemName: "paperplane") }
+                        }
+                        if sendBlockers.contains(.noCertificate) {
+                            Button("Open ELSTER Settings", action: showElsterSettings).buttonStyle(.link)
+                        }
+                    }
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("vat.send.blockers")
+                }
+            }
+            if status == .uncertain {
+                Label("The last send ended without an answer from ELSTER. Check Mein ELSTER whether it arrived before sending again.",
+                      systemImage: "questionmark.diamond.fill")
+                    .font(.callout)
+                    .foregroundStyle(Theme.amber)
             }
         }
         .card()
@@ -264,6 +359,17 @@ private struct VatReturnDetail: View {
     // MARK: Notes
 
     @ViewBuilder private var notes: some View {
+        if item.computesSondervorauszahlung, let basis = item.sondervorauszahlungBasis,
+           let amount = item.sondervorauszahlung {
+            NoteCard(icon: basis.missing.isEmpty ? "function" : "exclamationmark.triangle.fill",
+                     tint: basis.missing.isEmpty ? Theme.accent : Theme.amber) {
+                Text("Sondervorauszahlung \(Money.format(amount)): 1/11 of \(String(basis.year - 1))'s Kz83 total \(Money.format(basis.kz83Total)) plus its Sondervorauszahlung \(Money.format(basis.priorSondervorauszahlung)), from the recorded filings.")
+                if !basis.missing.isEmpty {
+                    Text("Incomplete: no filing or no amount is recorded for \(basis.missing.map(VatReturnTexts.titleString).formatted(.list(type: .and))). Mark them as filed elsewhere with their amounts, or enter the Sondervorauszahlung in the ELSTER settings.")
+                        .accessibilityIdentifier("vat.sondervorauszahlung.missing")
+                }
+            }
+        }
         if item.needsSondervorauszahlungAmount {
             NoteCard(icon: "exclamationmark.triangle.fill", tint: Theme.amber) {
                 if case .sondervorauszahlung = item.type {
@@ -497,6 +603,83 @@ private struct KennzahlenCard: View {
         }
         .font(.callout)
         .padding(.bottom, 6)
+    }
+}
+
+// MARK: - Filing history
+
+/// Every filing of the return, newest first: sends (accepted, rejected, uncertain; test and production) and
+/// returns marked as filed elsewhere, which can be removed again.
+private struct FilingHistoryCard: View {
+    let model: VatReturnsModel
+    let item: VatReturnItem
+
+    var body: some View {
+        let filings = (model.filings[item.id] ?? []).reversed()
+        VStack(alignment: .leading, spacing: 8) {
+            SectionLabel("Filings")
+            if filings.isEmpty {
+                Text("Not filed yet.").foregroundStyle(.secondary)
+            }
+            ForEach(Array(filings), id: \.uid) { filing in
+                FilingRow(model: model, item: item, filing: filing)
+                if filing.uid != filings.last?.uid { Divider().opacity(0.6) }
+            }
+        }
+        .card()
+        .accessibilityIdentifier("vat.filings")
+    }
+}
+
+private struct FilingRow: View {
+    let model: VatReturnsModel
+    let item: VatReturnItem
+    let filing: VatFiling
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Pill(text: VatReturnTexts.filingState(filing.filingState),
+                         tint: VatReturnTexts.filingStateTint(filing.filingState))
+                    if filing.isTest { Pill(text: Text("Test"), tint: Theme.accent) }
+                    if filing.isCorrection { Pill(text: Text("Kz10"), tint: .secondary) }
+                    Text(verbatim: date).foregroundStyle(.secondary)
+                }
+                if let ticket = filing.ticket {
+                    Text("Ticket \(ticket)").font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
+                }
+                if let text = filing.errorText {
+                    Text(verbatim: [filing.errorCode, text].compactMap { $0 }.joined(separator: " – "))
+                        .font(.callout)
+                        .foregroundStyle(filing.filingState == .rejected ? Theme.bad : Theme.amber)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Spacer()
+            if let amount = filing.entry.amount {
+                Text(verbatim: Money.format(amount)).monospacedDigit().foregroundStyle(.secondary)
+            }
+            if filing.protocolPath != nil {
+                Button("Show Protocol") { Task { await model.showProtocol(filing, item: item) } }
+                    .buttonStyle(.link)
+            }
+            if filing.filingState == .filedElsewhere {
+                Button("Remove") { model.removeFiledElsewhere(filing) }
+                    .buttonStyle(.link)
+                    .help(Text("Undo Mark as Filed Elsewhere"))
+                    .accessibilityIdentifier("vat.filing.remove")
+            }
+        }
+        .font(.callout)
+    }
+
+    private var date: String {
+        if filing.filingState == .filedElsewhere {
+            return filing.filedOn.map(Dates.long) ?? String(localized: "date unknown")
+        }
+        return (filing.sentAt ?? filing.createdAt).formatted(date: .abbreviated, time: .shortened)
     }
 }
 
