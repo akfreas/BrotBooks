@@ -178,6 +178,28 @@
     "Documents to copy" : {
 
     },
+    "domestic" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Domestic (German VAT)"
+          }
+        }
+      }
+    },
+    "domesticVat" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "German VAT (input tax)"
+          }
+        }
+      }
+    },
     "Done" : {
 
     },
@@ -232,6 +254,39 @@
     "Estimate" : {
 
     },
+    "euB2BGoods" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "EU business customer, goods (intra-EU supply)"
+          }
+        }
+      }
+    },
+    "euB2BService" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "EU business customer, service (reverse charge)"
+          }
+        }
+      }
+    },
+    "euGoodsAcquisition" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Goods acquired from the EU"
+          }
+        }
+      }
+    },
     "EUR gross, VAT and net are calculated when you save." : {
 
     },
@@ -255,6 +310,17 @@
     },
     "Expenses so far · %@" : {
 
+    },
+    "exportGoods" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export of goods outside the EU"
+          }
+        }
+      }
     },
     "Extracting details…" : {
 
@@ -333,6 +399,17 @@
     },
     "Importing records and documents…" : {
 
+    },
+    "importVat" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import VAT (customs notice)"
+          }
+        }
+      }
     },
     "in %@" : {
 
@@ -427,6 +504,17 @@
     "No VAT on this record." : {
 
     },
+    "nonEUService" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Service to a customer outside the EU"
+          }
+        }
+      }
+    },
     "Not available: %@" : {
 
     },
@@ -447,6 +535,28 @@
     },
     "Nothing to compare %@" : {
 
+    },
+    "notTaxable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not taxable"
+          }
+        }
+      }
+    },
+    "noVat" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No deductible VAT"
+          }
+        }
+      }
     },
     "Off (local store requested)" : {
 
@@ -510,6 +620,28 @@
     },
     "Rate" : {
 
+    },
+    "rcEUService" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reverse charge, EU service"
+          }
+        }
+      }
+    },
+    "rcNonEUService" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reverse charge, non-EU service"
+          }
+        }
+      }
     },
     "Reading %@…" : {
 
@@ -756,6 +888,9 @@
     },
     "VAT rates must be between 0 and 100, and a zero rate can't have an amount" : {
 
+    },
+    "VAT treatment" : {
+      "extractionState" : "manual"
     },
     "View Document" : {
 

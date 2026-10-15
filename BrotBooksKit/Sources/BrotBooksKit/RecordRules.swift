@@ -65,9 +65,16 @@ public struct VatRowInput: Sendable, Equatable, Hashable {
 
 /// Business rules for records: writable fields, validation and derived amounts.
 public enum RecordRules {
-    /// Writable fields are the CSV columns minus the document filename (documents are attached separately).
+    /// Writable fields are the CSV columns minus the document filename (documents are attached separately),
+    /// plus the app-local fields.
     public static func writable(_ kind: Kind) -> [Column] {
-        Columns.of(kind).filter { $0.name != "document_filename" }
+        Columns.of(kind).filter { $0.name != "document_filename" } + localColumns(kind)
+    }
+
+    /// Fields stored and edited like columns but local to the app: never part of Sorted's CSV import or export.
+    /// The header is only a label; there is no CSV column.
+    public static func localColumns(_ kind: Kind) -> [Column] {
+        [Column(header: "VAT treatment", name: "vat_treatment", type: .text)]
     }
 
     public static let required = ["date", "gross_amount"]
@@ -102,6 +109,9 @@ public enum RecordRules {
         var out = RecordValues()
         for (name, input) in fields {
             out[name] = try coerce(columns[name]!, input)
+        }
+        if let treatment = out["vat_treatment"]?.text, VatTreatment(rawValue: treatment)?.kind != kind {
+            throw ValidationError("vat_treatment: not a \(kind.rawValue) treatment: '\(treatment)'")
         }
         for name in required where !draft && out[name] == .null {
             throw ValidationError("\(name) cannot be null")

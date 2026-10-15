@@ -80,6 +80,9 @@ public final class Expense: LedgerRecord {
     public var reviewStatus: String?
     /// `ExtractionInfo` JSON while the expense is a draft; nil otherwise.
     public var extraction: Data?
+    /// `VatTreatment` raw value, set explicitly by the user; nil while unset, when the treatment is only
+    /// suggested (`VatTreatment.suggest`). App-local like `reviewStatus`: not a Sorted CSV column.
+    public var vatTreatment: String?
 
     public static let draftStatus = "draft"
 
@@ -98,6 +101,7 @@ public final class Expense: LedgerRecord {
         case "expense_flat_rate_end_date": return .optionalDate(expenseFlatRateEndDate)
         case "business_trip_country": return .optionalText(businessTripCountry)
         case "is_home_office": return isHomeOffice.map(FieldValue.bool) ?? .null
+        case "vat_treatment": return .optionalText(vatTreatment)
         default: return nil
         }
     }
@@ -115,6 +119,7 @@ public final class Expense: LedgerRecord {
         case "expense_flat_rate_end_date": expenseFlatRateEndDate = value.date
         case "business_trip_country": businessTripCountry = value.text
         case "is_home_office": isHomeOffice = value.bool
+        case "vat_treatment": vatTreatment = value.text
         default: return false
         }
         return true
@@ -150,6 +155,9 @@ public final class Income: LedgerRecord {
     public var createdAt: Date = Date()
     public var updatedAt: Date = Date()
     public var removedAt: Date?
+    /// `VatTreatment` raw value, set explicitly by the user; nil while unset, when the treatment is only
+    /// suggested (`VatTreatment.suggest`). App-local: not a Sorted CSV column.
+    public var vatTreatment: String?
 
     public init() {}
 
@@ -161,6 +169,7 @@ public final class Income: LedgerRecord {
         case "sale_type": return .optionalText(saleType)
         case "payment_status": return .optionalText(paymentStatus)
         case "payment_date": return .optionalDate(paymentDate)
+        case "vat_treatment": return .optionalText(vatTreatment)
         default: return nil
         }
     }
@@ -173,6 +182,7 @@ public final class Income: LedgerRecord {
         case "sale_type": saleType = value.text
         case "payment_status": paymentStatus = value.text
         case "payment_date": paymentDate = value.date
+        case "vat_treatment": vatTreatment = value.text
         default: return false
         }
         return true
@@ -188,10 +198,10 @@ extension FieldValue {
 extension LedgerRecord {
     public var kind: Kind { Self.kind }
 
-    /// All CSV columns as typed values.
+    /// All CSV columns and app-local fields (`RecordRules.localColumns`) as typed values.
     public var values: RecordValues {
         var out = RecordValues()
-        for column in Columns.of(Self.kind) { out[column.name] = value(column.name) }
+        for column in Columns.of(Self.kind) + RecordRules.localColumns(Self.kind) { out[column.name] = value(column.name) }
         return out
     }
 

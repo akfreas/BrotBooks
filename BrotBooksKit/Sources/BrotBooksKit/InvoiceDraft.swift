@@ -240,6 +240,10 @@ public enum InvoiceDraftBuilder {
     public struct Draft: Sendable, Equatable {
         public var fields: [String: FieldInput]
         public var info: ExtractionInfo
+        /// The VAT treatment suggested by the supplier region and VAT rows set above (reverse charge for a
+        /// foreign supplier without VAT). Not part of `fields`: the draft's `vat_treatment` stays unset, so the
+        /// treatment shows as unconfirmed until the user sets it.
+        public var vatTreatment: VatTreatment.Suggestion?
 
         /// Ready for review without a second look: a date and a gross amount were read, there are no warnings and
         /// no field has low confidence.
@@ -324,8 +328,11 @@ public enum InvoiceDraftBuilder {
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys
         let raw = (try? encoder.encode(invoice)).flatMap { String(data: $0, encoding: .utf8) }
+        let vatTreatment = (try? RecordRules.coerce(.expenses, fields, draft: true))
+            .map { VatTreatment.suggest(.expenses, values: $0) }
         return Draft(fields: fields, info: ExtractionInfo(state: .done, raw: raw, confidence: confidence,
-                                                          warnings: warnings, sourceFilename: sourceFilename))
+                                                          warnings: warnings, sourceFilename: sourceFilename),
+                     vatTreatment: vatTreatment)
     }
 
     // MARK: Amounts

@@ -41,6 +41,7 @@ public enum EditForm {
                 + amounts + [
                     FormField(name: "deductible_amount", label: "Deductible amount (EUR)", type: .number),
                     FormField(name: "supplier_region", label: "Supplier region", type: .select, options: regions),
+                    vatTreatment(kind),
                 ]
         case .income:
             return sharedHead + [
@@ -52,8 +53,16 @@ public enum EditForm {
                 FormField(name: "client_region", label: "Client region", type: .select, options: regions),
                 FormField(name: "client_vat_number", label: "Client VAT number", type: .text),
                 FormField(name: "client_is_private_person", label: "Client is a private person", type: .checkbox),
+                vatTreatment(kind),
             ]
         }
+    }
+
+    /// The treatment's raw values as options; their English labels are in the string catalog under those keys.
+    /// Empty ("—") leaves the treatment unset, so only the suggestion applies.
+    static func vatTreatment(_ kind: Kind) -> FormField {
+        FormField(name: "vat_treatment", label: "VAT treatment", type: .select,
+                  options: VatTreatment.cases(for: kind).map(\.rawValue))
     }
 
     /// Form state: text per field (checkboxes as "true"/"false") plus VAT rows.
