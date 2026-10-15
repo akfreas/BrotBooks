@@ -9,9 +9,13 @@ let package = Package(
     products: [
         .library(name: "EricKit", targets: ["EricKit"]),
     ],
+    dependencies: [
+        // Test-only: the live tests validate XML built by BrotBooksKit's UStVAXML.
+        .package(path: "../BrotBooksKit"),
+    ],
     targets: [
         .target(name: "CEric"),
         .target(name: "EricKit", dependencies: ["CEric"]),
-        .testTarget(name: "EricKitTests", dependencies: ["EricKit"]),
+        .testTarget(name: "EricKitTests", dependencies: ["EricKit", .product(name: "BrotBooksKit", package: "BrotBooksKit")]),
     ]
 )
