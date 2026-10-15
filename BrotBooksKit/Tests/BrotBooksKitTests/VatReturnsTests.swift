@@ -9,8 +9,11 @@ import Testing
         TaxSettings(identity: F.identity, periods: periods)
     }
 
+    /// The schedule without its ZM items (`ZMScheduleTests` covers those).
+    func ustvaOnly(_ items: [VatReturnItem]) -> [VatReturnItem] { items.filter { $0.zmPeriod == nil } }
+
     @Test func monthlyWithDauerfristListsMonthsAndSondervorauszahlungNewestDueFirst() {
-        let items = VatReturnSchedule.items(years: [2026], settings: settings([.initial(from: "2026-01-01")]))
+        let items = ustvaOnly(VatReturnSchedule.items(years: [2026], settings: settings([.initial(from: "2026-01-01")])))
         #expect(items.map(\.id) == (1...12).reversed().map { String(format: "2026-%02d", $0) } + ["2026-sondervorauszahlung"])
         #expect(items.first { $0.id == "2026-03" }?.dueDate == "2026-05-10")
         #expect(items.first { $0.id == "2026-12" }?.dueDate == "2027-02-10")
@@ -22,7 +25,7 @@ import Testing
 
     @Test func quarterlyWithDauerfristListsQuartersAndTheApplication() {
         let quarterly = TaxSettingsPeriod(effectiveFrom: "2025-01-01", ustvaFrequency: .quarterly)
-        let items = VatReturnSchedule.items(years: [2025], settings: settings([quarterly]))
+        let items = ustvaOnly(VatReturnSchedule.items(years: [2025], settings: settings([quarterly])))
         #expect(items.map(\.id) == ["2025-44", "2025-43", "2025-42", "2025-41", "2025-dauerfristverlaengerung"])
         #expect(items.first { $0.id == "2025-41" }?.dueDate == "2025-05-10")
         // Due with the first quarter at its regular due date.
@@ -32,7 +35,7 @@ import Testing
 
     @Test func withoutDauerfristNoYearlyItemsAndShorterDeadlines() {
         let plain = TaxSettingsPeriod(effectiveFrom: "2026-01-01", dauerfristverlaengerung: false)
-        let items = VatReturnSchedule.items(years: [2026], settings: settings([plain]))
+        let items = ustvaOnly(VatReturnSchedule.items(years: [2026], settings: settings([plain])))
         #expect(items.count == 12)
         #expect(items.first { $0.id == "2026-03" }?.dueDate == "2026-04-10")
     }
@@ -46,7 +49,7 @@ import Testing
             TaxSettingsPeriod(effectiveFrom: "2026-07-01", ustvaFrequency: .none),
             TaxSettingsPeriod(effectiveFrom: "2026-11-01", ustvaFrequency: .quarterly, dauerfristverlaengerung: false),
         ])
-        let items = VatReturnSchedule.items(years: [2025, 2026], settings: s)
+        let items = ustvaOnly(VatReturnSchedule.items(years: [2025, 2026], settings: s))
         let ids = Set(items.map(\.id))
         #expect(ids == Set(["2025-41", "2025-42", "2025-43", "2025-44", "2026-01", "2026-02", "2026-03", "2026-04",
                             "2026-05", "2026-06", "2026-11", "2026-12", "2026-sondervorauszahlung"]))

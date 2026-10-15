@@ -100,9 +100,7 @@ public enum UStVAXML {
         x.element("Vorgang", "send-Auth")
         if configuration.testMode { x.element("Testmerker", "700000004") }
         x.element("HerstellerID", header.herstellerID)
-        x.element("DatenLieferant", [id.name, id.street, address.number ?? "", address.suffix ?? "", "",
-                                     id.postalCode, id.city, "Deutschland", id.phone, id.email]
-            .joined(separator: ";"))
+        x.element("DatenLieferant", datenLieferant(id))
         x.open("Datei")
         x.element("Verschluesselung", "CMSEncryptedData")
         x.element("Kompression", "GZIP")
@@ -150,6 +148,14 @@ public enum UStVAXML {
         x.close("DatenTeil")
         x.close("Elster")
         return x.text
+    }
+
+    /// `TransferHeader/DatenLieferant`: name, street, house number, suffix, address addition, postal code, city,
+    /// country, phone and e-mail, separated by `;`.
+    static func datenLieferant(_ id: TaxIdentity) -> String {
+        let address = Address(street: id.street, houseNumber: id.houseNumber)
+        return [id.name, id.street, address.number ?? "", address.suffix ?? "", "", id.postalCode, id.city,
+                "Deutschland", id.phone, id.email].joined(separator: ";")
     }
 
     /// The schema's `Hausnummer` is digits only; a suffix ("12a", "12 b") goes into `HNrZusatz`. A house number

@@ -86,7 +86,9 @@ private struct VatReturnList: View {
                     Section {
                         ForEach(model.items.filter { $0.year == year }) { item in
                             VatReturnRow(item: item, status: model.status(item), filedInTest: model.filedInTest(item),
-                                         result: model.results[item.id], warnings: model.warnings(item).count)
+                                         amount: item.zmPeriod != nil ? model.mainAmount(item)?.amount
+                                             : model.results[item.id]?.kennzahlen.kz83,
+                                         warnings: model.warningCount(item))
                                 .tag(item.id)
                                 .accessibilityIdentifier("vat.row.\(item.id)")
                         }
@@ -161,7 +163,8 @@ private struct VatReturnRow: View {
     let item: VatReturnItem
     let status: VatReturnStatus
     let filedInTest: Bool
-    let result: UStVAResult?
+    /// Kz83 of a UStVA, the sum of a ZM's lines.
+    let amount: Decimal?
     let warnings: Int
 
     var body: some View {
@@ -188,8 +191,8 @@ private struct VatReturnRow: View {
                     Pill(text: VatReturnTexts.status(status), tint: VatReturnTexts.statusTint(status))
                 }
                 .fixedSize()
-                if let result {
-                    Text(verbatim: Money.format(result.kennzahlen.kz83))
+                if let amount {
+                    Text(verbatim: Money.format(amount))
                         .font(.caption)
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
@@ -229,6 +232,8 @@ private struct VatReturnDetail: View {
                 if let result {
                     KennzahlenCard(model: model, result: result,
                                    flagged: Set(model.validations[item.id].map(Self.flaggedKennzahlen) ?? []))
+                } else if item.zmPeriod != nil {
+                    ZMLinesCard(model: model, item: item)
                 } else if case .sondervorauszahlung = item.type {
                     sondervorauszahlungCard
                 }
@@ -381,7 +386,20 @@ private struct VatReturnDetail: View {
                     .accessibilityIdentifier("vat.sondervorauszahlung.settings")
             }
         }
+        ForEach(Array(model.consistencyMismatches(item).enumerated()), id: \.offset) { _, check in
+            ZMConsistencyNote(check: check)
+        }
+        if let warning = model.thresholdWarnings[item.id] {
+            NoteCard(icon: "exclamationmark.triangle.fill", tint: Theme.amber) {
+                Text("EU deliveries of goods in this quarter are \(Money.format(warning.deliveries)), above the \(Money.format(warning.threshold)) threshold: the ZM must be filed monthly from the month the threshold was crossed. Switch the ZM frequency to monthly in the ELSTER settings.")
+                Button("Open ELSTER Settings", action: showElsterSettings).buttonStyle(.link)
+                    .accessibilityIdentifier("vat.zm.threshold.settings")
+            }
+            .accessibilityIdentifier("vat.zm.threshold")
+        }
         switch item.type {
+        case .zm:
+            zmNotes
         case .sondervorauszahlung:
             NoteCard(icon: "info.circle", tint: Theme.accent) {
                 Text("With monthly returns, filing the Sondervorauszahlung is also the application for the Dauerfristverlängerung: each return is then due one month later.")
@@ -392,6 +410,31 @@ private struct VatReturnDetail: View {
             }
         case .ustva:
             EmptyView()
+        }
+    }
+
+    @ViewBuilder private var zmNotes: some View {
+        if model.zmHasNothingToReport(item) && model.filingMark(for: item) == nil {
+            NoteCard(icon: "checkmark.circle", tint: .secondary) {
+                Text("No EU sales to businesses in this period: no ZM is due, and none may be filed (nil reports are not allowed).")
+            }
+            .accessibilityIdentifier("vat.zm.nothingToReport")
+        } else {
+            NoteCard(icon: "info.circle", tint: Theme.accent) {
+                Text("The ZM reports your EU sales to businesses per customer VAT ID to the Bundeszentralamt für Steuern. It follows the invoice date, is due on the 25th after the period and is not extended by the Dauerfristverlängerung.")
+            }
+        }
+        if let check = model.consistency[item.id], check.matches, !model.zmHasNothingToReport(item) {
+            NoteCard(icon: "checkmark.seal", tint: Theme.moneyIn) {
+                Text("Matches Kz41 and Kz21 of the UStVA for \(check.ustvaPeriods.map(VatReturnTexts.periodTitleString).formatted(.list(type: .and))).")
+            }
+            .accessibilityIdentifier("vat.zm.consistent")
+        }
+        if let report = model.zmReport(item), report.meldeart == .corrected, !report.lines.isEmpty {
+            NoteCard(icon: "arrow.uturn.backward.circle", tint: Theme.accent) {
+                Text("This ZM was filed already, so it is sent as a correction: only the changed lines, each with its full corrected amount; a line that is gone is cancelled with 0 €. Correct a filed ZM within one month of noticing the error.")
+            }
+            .accessibilityIdentifier("vat.zm.correction")
         }
     }
 
@@ -606,6 +649,112 @@ private struct KennzahlenCard: View {
     }
 }
 
+// MARK: - ZM
+
+/// The ZM's mismatch with the UStVAs of the same months, per Umsatzart.
+private struct ZMConsistencyNote: View {
+    let check: ZMConsistency
+
+    var body: some View {
+        NoteCard(icon: "exclamationmark.triangle.fill", tint: Theme.amber) {
+            Text("The ZM for \(periods(check.zmPeriods)) doesn't match the UStVA for \(periods(check.ustvaPeriods)):")
+                .fontWeight(.medium)
+            ForEach(check.comparisons.filter { !$0.matches }, id: \.kennzahl) { comparison in
+                Text("\(VatReturnTexts.umsatzart(comparison.umsatzart)): ZM \(Money.format(comparison.zmTotal)), \(comparison.kennzahl.elementName) \(Money.format(comparison.ustvaTotal))")
+                    .monospacedDigit()
+            }
+            Text("Check the VAT treatment and customer VAT ID of the EU sales, and whether a return was filed before records changed.")
+                .foregroundStyle(.secondary)
+        }
+        .accessibilityIdentifier("vat.zm.mismatch")
+    }
+
+    private func periods(_ periods: [VatPeriod]) -> String {
+        periods.map(VatReturnTexts.periodTitleString).formatted(.list(type: .and))
+    }
+}
+
+/// The ZM lines per customer VAT ID and Umsatzart in whole euros, with a drill-down to their records, and the
+/// lines a correction sends.
+private struct ZMLinesCard: View {
+    @Bindable var model: VatReturnsModel
+    let item: VatReturnItem
+
+    var body: some View {
+        let lines = model.zmResults[item.id]?.zmLines ?? []
+        let report = model.zmReport(item)
+        VStack(alignment: .leading, spacing: 4) {
+            SectionLabel("ZM lines")
+                .padding(.bottom, 6)
+            if lines.isEmpty {
+                Text("No EU sales to businesses in this period.").foregroundStyle(.secondary)
+            }
+            ForEach(lines, id: \.self) { line in
+                row(line)
+                if model.selectedZMLine == line { records(line) }
+                if line != lines.last { Divider().opacity(0.6) }
+            }
+            if let report, report.meldeart == .corrected, !report.lines.isEmpty {
+                SectionLabel("Correction to send")
+                    .padding(.top, 12)
+                    .padding(.bottom, 4)
+                ForEach(report.lines, id: \.self) { line in
+                    HStack {
+                        Text(verbatim: line.customerVatID).monospaced()
+                        VatReturnTexts.umsatzart(line.umsatzart).foregroundStyle(.secondary)
+                        Spacer()
+                        Text(verbatim: Money.format(line.amount)).monospacedDigit()
+                    }
+                    .padding(.vertical, 2)
+                }
+                .accessibilityIdentifier("vat.zm.correctionLines")
+            }
+            Text("Amounts are cut to whole euros; lines under 1 € are left out. Select a line to see its records.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.top, 8)
+        }
+        .card()
+        .accessibilityIdentifier("vat.zm.lines")
+    }
+
+    private func row(_ line: ZMLine) -> some View {
+        let selected = model.selectedZMLine == line
+        return Button {
+            model.selectedZMLine = selected ? nil : line
+        } label: {
+            HStack {
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .rotationEffect(.degrees(selected ? 90 : 0))
+                    .foregroundStyle(.secondary)
+                if line.customerVatID.isEmpty {
+                    Text("No VAT ID").foregroundStyle(Theme.bad)
+                } else {
+                    Text(verbatim: line.customerVatID).monospaced()
+                }
+                VatReturnTexts.umsatzart(line.umsatzart).foregroundStyle(.secondary)
+                Spacer()
+                Text(verbatim: Money.format(line.wholeEuros)).monospacedDigit()
+            }
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("vat.zm.line.\(line.customerVatID)-\(line.umsatzart.rawValue)")
+    }
+
+    private func records(_ line: ZMLine) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            ForEach(line.recordUIDs, id: \.self) { uid in
+                RecordLink(record: model.records[uid], amount: nil)
+            }
+        }
+        .font(.callout)
+        .padding(.bottom, 6)
+    }
+}
+
 // MARK: - Filing history
 
 /// Every filing of the return, newest first: sends (accepted, rejected, uncertain; test and production) and
@@ -643,7 +792,9 @@ private struct FilingRow: View {
                     Pill(text: VatReturnTexts.filingState(filing.filingState),
                          tint: VatReturnTexts.filingStateTint(filing.filingState))
                     if filing.isTest { Pill(text: Text("Test"), tint: Theme.accent) }
-                    if filing.isCorrection { Pill(text: Text("Kz10"), tint: .secondary) }
+                    if filing.isCorrection {
+                        Pill(text: item.zmPeriod != nil ? Text("Correction") : Text(verbatim: "Kz10"), tint: .secondary)
+                    }
                     Text(verbatim: date).foregroundStyle(.secondary)
                 }
                 if let ticket = filing.ticket {

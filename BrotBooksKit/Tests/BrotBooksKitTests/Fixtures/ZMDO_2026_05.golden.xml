@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Elster xmlns="http://www.elster.de/elsterxml/schema/v11">
+    <TransferHeader version="11">
+        <Verfahren>ElsterExtern</Verfahren>
+        <DatenArt>ZMDO</DatenArt>
+        <Vorgang>send-Auth</Vorgang>
+        <Testmerker>700000004</Testmerker>
+        <HerstellerID>27425</HerstellerID>
+        <DatenLieferant>Alois Mustermann;Testgasse;13;a;;08151;Musterstadt;Deutschland;0815/99999999;Mustermann@Geschaeft.de</DatenLieferant>
+        <Datei>
+            <Verschluesselung>CMSEncryptedData</Verschluesselung>
+            <Kompression>GZIP</Kompression>
+        </Datei>
+    </TransferHeader>
+    <DatenTeil>
+        <Nutzdatenblock>
+            <NutzdatenHeader version="11">
+                <NutzdatenTicket>1</NutzdatenTicket>
+                <Empfaenger id="L">BF</Empfaenger>
+            </NutzdatenHeader>
+            <Nutzdaten>
+                <zm xmlns="http://www.elster.de/elsterxml/schema/v11" version="000005">
+                    <unternehmer>
+                        <knri>DE123456789</knri>
+                        <zulassNr>
+                            <zulnr1>N</zulnr1>
+                            <zulnr2>1111111</zulnr2>
+                        </zulassNr>
+                        <anschrift>
+                            <name>Alois Mustermann</name>
+                            <strasse>Testgasse</strasse>
+                            <hausnr>13</hausnr>
+                            <hausnrzusatz>a</hausnrzusatz>
+                            <plz>08151</plz>
+                            <ort>Musterstadt</ort>
+                            <staat>DE</staat>
+                            <telefon>0815/99999999</telefon>
+                        </anschrift>
+                        <zm-zeilen waehrung="1" meldeart="10">
+                            <anzeige>false</anzeige>
+                            <widerruf>false</widerruf>
+                            <mzr>
+                                <quart>25</quart>
+                                <jahr>2026</jahr>
+                            </mzr>
+                            <zeile umsatzart="S">
+                                <knre>DK13585627</knre>
+                                <betrag>2500</betrag>
+                            </zeile>
+                            <zeile umsatzart="L">
+                                <knre>PL5630292567</knre>
+                                <betrag>12999</betrag>
+                            </zeile>
+                        </zm-zeilen>
+                    </unternehmer>
+                </zm>
+            </Nutzdaten>
+        </Nutzdatenblock>
+    </DatenTeil>
+</Elster>

@@ -94,16 +94,28 @@ private struct VatSendConfirmation: View {
                 if let period = item.period {
                     row("Period") { Text(verbatim: "\(period.year) / Zeitraum \(period.zeitraum)") }
                 }
-                row("Finanzamt") {
-                    Text(verbatim: finanzamtName.map { "\($0) (\(identity.finanzamt))" } ?? identity.finanzamt)
-                }
-                row("Steuernummer") {
-                    Text(verbatim: identity.steuernummerRegional.isEmpty
-                         ? identity.steuernummer : "\(identity.steuernummerRegional) (\(identity.steuernummer))")
-                        .monospacedDigit()
+                if let period = item.zmPeriod {
+                    row("Period") { Text(verbatim: "\(period.year) / Meldezeitraum \(ZMMeldezeitraum(period).rawValue)") }
+                    row("Recipient") { Text("Bundeszentralamt für Steuern") }
+                    row("USt-IdNr") { Text(verbatim: identity.vatID).monospacedDigit() }
+                    if let report = model.zmReport(item) {
+                        row("Lines") { Text(verbatim: String(report.lines.count)) }
+                        if report.meldeart == .corrected {
+                            row("Corrected report") { Text("Yes (only the changed lines)") }
+                        }
+                    }
+                } else {
+                    row("Finanzamt") {
+                        Text(verbatim: finanzamtName.map { "\($0) (\(identity.finanzamt))" } ?? identity.finanzamt)
+                    }
+                    row("Steuernummer") {
+                        Text(verbatim: identity.steuernummerRegional.isEmpty
+                             ? identity.steuernummer : "\(identity.steuernummerRegional) (\(identity.steuernummer))")
+                            .monospacedDigit()
+                    }
                 }
                 if let main = model.mainAmount(item) {
-                    row(LocalizedStringKey(main.kennzahl.elementName)) {
+                    row(main.kennzahl.map { LocalizedStringKey($0.elementName) } ?? "Total") {
                         Text(verbatim: Money.format(main.amount)).monospacedDigit().fontWeight(.semibold)
                     }
                 }
@@ -156,7 +168,8 @@ private struct VatSendConfirmation: View {
 
             if !session.isTest {
                 Toggle(isOn: $confirmedProduction) {
-                    Text("I want to file this return with the Finanzamt.").fontWeight(.semibold)
+                    (item.zmPeriod != nil ? Text("I want to file this ZM with the Bundeszentralamt für Steuern.")
+                        : Text("I want to file this return with the Finanzamt.")).fontWeight(.semibold)
                 }
                 .accessibilityIdentifier("vat.send.confirmProduction")
             }
@@ -179,7 +192,7 @@ private struct VatSendConfirmation: View {
             }
         }
         .padding(24)
-        .task { await loadFinanzamtName() }
+        .task { if item.zmPeriod == nil { await loadFinanzamtName() } }
     }
 
     private func row<Content: View>(_ label: LocalizedStringKey, @ViewBuilder _ content: () -> Content) -> some View {
@@ -341,13 +354,14 @@ struct MarkFiledElsewhereSheet: View {
 
     var body: some View {
         let kennzahl = model.mainAmount(item)?.kennzahl ?? (item.period != nil ? .kz83 : .kz38)
+        let hasAmount = item.filingKind != .dauerfristverlaengerung && item.filingKind != .zm
         VStack(alignment: .leading, spacing: 14) {
             Text("Mark as Filed Elsewhere").font(.title3.bold())
             Text("For a return filed with Mein ELSTER or by your accountant. It then counts as filed, and its amount counts toward next year's Sondervorauszahlung.")
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             Text(VatReturnTexts.titleString(item)).font(.headline)
-            if item.filingKind != .dauerfristverlaengerung {
+            if hasAmount {
                 Toggle("I know the amount filed", isOn: $knowsAmount)
                 if knowsAmount {
                     LabeledContent(kennzahl.elementName) {
@@ -365,11 +379,12 @@ struct MarkFiledElsewhereSheet: View {
                 Spacer()
                 Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
                 Button("Mark as Filed") {
-                    model.markFiledElsewhere(item, amount: knowsAmount ? amount : nil, filedOn: ISODate.today(filedOn))
+                    model.markFiledElsewhere(item, amount: knowsAmount && hasAmount ? amount : nil,
+                                             filedOn: ISODate.today(filedOn))
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
-                .disabled(knowsAmount && item.filingKind != .dauerfristverlaengerung && amount == nil)
+                .disabled(knowsAmount && hasAmount && amount == nil)
                 .accessibilityIdentifier("vat.elsewhere.save")
             }
         }

@@ -177,6 +177,7 @@ public struct UStVAResult: Sendable, Equatable {
 /// - Skips drafts, removed records and VAT settlements with the tax office.
 /// - Period assignment follows the taxation method: Soll uses the record `date`; Ist uses `payment_date` for
 ///   income (unpaid income invoiced in the period is left out with `unpaidUnderIst`); expenses always go by `date`.
+///   The ZM lines always go by `date` (`zmLines`).
 /// - Records with an unconfirmed treatment are aggregated with the suggestion and reported as
 ///   `unconfirmedTreatment`.
 /// - Amounts are in EUR: `net_amount` (from the converted gross) and the VAT rows, which are EUR already.
@@ -220,11 +221,27 @@ public enum UStVAAggregator {
         }
 
         let kennzahlen = Kennzahlen.file(acc.sums, form: form, rates: configuration.vatRates, rateDate: period.start)
-        let zm = acc.zm.map { key, value in
-            ZMLine(customerVatID: key.vatID, umsatzart: key.art, amount: value.amount, recordUIDs: value.uids)
-        }.sorted { ($0.customerVatID, $0.umsatzart) < ($1.customerVatID, $1.umsatzart) }
+        let zm = configuration.taxationMethod == .soll
+            ? acc.zmLines : zmLines(records, period: period, configuration: configuration)
         return UStVAResult(period: period, kennzahlen: kennzahlen, sums: acc.sums, contributions: acc.contributions,
                            zmLines: zm, issues: acc.issues, recordUIDs: included)
+    }
+
+    /// The ZM lines of `period`: the EU B2B sales by record `date` (the invoice date) under either taxation method.
+    /// §18a(8) UStG ties the ZM to the period in which the invoice is issued (goods) or the service is performed,
+    /// not to the payment, so Ist-Versteuerung doesn't move them.
+    public static func zmLines(_ records: [UStVARecord], period: VatPeriod,
+                               configuration: TaxConfiguration) -> [ZMLine] {
+        zmAggregate(records, period: period, configuration: configuration).zmLines
+    }
+
+    /// The aggregation of `period` by record `date` under either taxation method: its `zmLines` and the issues of
+    /// the records behind them (the ZM's warnings). Its Kennzahlen are not a UStVA under Ist-Versteuerung.
+    public static func zmAggregate(_ records: [UStVARecord], period: VatPeriod,
+                                   configuration: TaxConfiguration) -> UStVAResult {
+        var soll = configuration
+        soll.settings.taxationMethod = .soll
+        return aggregate(records, period: period, configuration: soll)
     }
 
     /// The drafts (not removed) dated in `period`, as `draftInPeriod` issues. Kept apart from `aggregate`, which
@@ -254,6 +271,13 @@ public enum UStVAAggregator {
 
         mutating func issue(_ code: UStVAIssue.Code, _ record: UStVARecord) {
             issues.append(UStVAIssue(code, recordUID: record.uid, kind: record.kind))
+        }
+
+        /// Sorted by customer VAT ID, then Umsatzart.
+        var zmLines: [ZMLine] {
+            zm.map { key, value in
+                ZMLine(customerVatID: key.vatID, umsatzart: key.art, amount: value.amount, recordUIDs: value.uids)
+            }.sorted { ($0.customerVatID, $0.umsatzart) < ($1.customerVatID, $1.umsatzart) }
         }
     }
 

@@ -1,6 +1,105 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "ZM %@" : {
+
+    },
+    "Monthly EC sales list (ZM)" : {
+
+    },
+    "Quarterly EC sales list (ZM)" : {
+
+    },
+    "Nothing to report" : {
+
+    },
+    "No EU sales to businesses in this period: there is nothing to report." : {
+
+    },
+    "Enter the customer's VAT ID on every EU sale to a business." : {
+
+    },
+    "This ZM was filed and nothing changed since: there is nothing to correct." : {
+
+    },
+    "This ZM was marked as filed elsewhere, so the app doesn't know which lines were filed. File the correction in the BZSt online portal." : {
+
+    },
+    "Enter your USt-IdNr (DE and nine digits) in the ELSTER settings." : {
+
+    },
+    "Enter your street, postal code and city in the ELSTER settings." : {
+
+    },
+    "Goods (L)" : {
+
+    },
+    "Services (S)" : {
+
+    },
+    "EU deliveries of goods in this quarter are %@, above the %@ threshold: the ZM must be filed monthly from the month the threshold was crossed. Switch the ZM frequency to monthly in the ELSTER settings." : {
+
+    },
+    "No EU sales to businesses in this period: no ZM is due, and none may be filed (nil reports are not allowed)." : {
+
+    },
+    "The ZM reports your EU sales to businesses per customer VAT ID to the Bundeszentralamt für Steuern. It follows the invoice date, is due on the 25th after the period and is not extended by the Dauerfristverlängerung." : {
+
+    },
+    "Matches Kz41 and Kz21 of the UStVA for %@." : {
+
+    },
+    "This ZM was filed already, so it is sent as a correction: only the changed lines, each with its full corrected amount; a line that is gone is cancelled with 0 €. Correct a filed ZM within one month of noticing the error." : {
+
+    },
+    "Correction" : {
+
+    },
+    "The ZM for %@ doesn't match the UStVA for %@:" : {
+
+    },
+    "%@: ZM %@, %@ %@" : {
+
+    },
+    "Check the VAT treatment and customer VAT ID of the EU sales, and whether a return was filed before records changed." : {
+
+    },
+    "ZM lines" : {
+
+    },
+    "Correction to send" : {
+
+    },
+    "No EU sales to businesses in this period." : {
+
+    },
+    "Amounts are cut to whole euros; lines under 1 € are left out. Select a line to see its records." : {
+
+    },
+    "No VAT ID" : {
+
+    },
+    "Recipient" : {
+
+    },
+    "Bundeszentralamt für Steuern" : {
+
+    },
+    "Lines" : {
+
+    },
+    "Corrected report" : {
+
+    },
+    "Yes (only the changed lines)" : {
+
+    },
+    "Total" : {
+
+    },
+    "I want to file this ZM with the Bundeszentralamt für Steuern." : {
+
+    },
     "A test filing never counts as filed: the return is still due for real." : {
 
     },

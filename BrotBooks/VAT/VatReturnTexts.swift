@@ -10,6 +10,7 @@ enum VatReturnTexts {
         case .ustva(let period): return periodTitle(period)
         case .sondervorauszahlung(let year): return Text("Sondervorauszahlung \(String(year))")
         case .dauerfristverlaengerung(let year): return Text("Dauerfristverlängerung application \(String(year))")
+        case .zm(let period): return Text("ZM \(periodTitleString(period))")
         }
     }
 
@@ -19,6 +20,7 @@ enum VatReturnTexts {
         case .sondervorauszahlung(let year): return String(localized: "Sondervorauszahlung \(String(year))")
         case .dauerfristverlaengerung(let year):
             return String(localized: "Dauerfristverlängerung application \(String(year))")
+        case .zm(let period): return String(localized: "ZM \(periodTitleString(period))")
         }
     }
 
@@ -40,6 +42,8 @@ enum VatReturnTexts {
         case .ustva(let period): return period.length == .month ? Text("Monthly UStVA") : Text("Quarterly UStVA")
         case .sondervorauszahlung: return Text("Special advance payment")
         case .dauerfristverlaengerung: return Text("Extension of the filing deadline")
+        case .zm(let period):
+            return period.length == .month ? Text("Monthly EC sales list (ZM)") : Text("Quarterly EC sales list (ZM)")
         }
     }
 
@@ -52,12 +56,13 @@ enum VatReturnTexts {
         case .uncertain: return Text("Check status")
         case .filedElsewhere: return Text("Filed elsewhere")
         case .filed: return Text("Filed")
+        case .nothingToReport: return Text("Nothing to report")
         }
     }
 
     static func statusTint(_ status: VatReturnStatus) -> Color {
         switch status {
-        case .notDue: return .secondary
+        case .notDue, .nothingToReport: return .secondary
         case .dueIn(let days): return days <= 14 ? Theme.amber : .secondary
         case .overdue: return Theme.bad
         case .uncertain: return Theme.amber
@@ -73,6 +78,7 @@ enum VatReturnTexts {
         case .sondervorauszahlung(let year): return String(localized: "Sondervorauszahlung \(String(year))")
         case .dauerfristverlaengerung(let year):
             return String(localized: "Dauerfristverlängerung application \(String(year))")
+        case .zm(let period): return String(localized: "ZM \(periodTitleString(period))")
         }
     }
 
@@ -105,6 +111,11 @@ enum VatReturnTexts {
         case .correctionRequired:
             return Text("This return was already filed. To send it again, turn on Corrected return (Kz10).")
         case .alreadyFiled: return Text("This return was already filed and can't be sent again.")
+        case .nothingToReport: return Text("No EU sales to businesses in this period: there is nothing to report.")
+        case .missingCustomerVatID: return Text("Enter the customer's VAT ID on every EU sale to a business.")
+        case .nothingToCorrect: return Text("This ZM was filed and nothing changed since: there is nothing to correct.")
+        case .correctionBasisUnknown:
+            return Text("This ZM was marked as filed elsewhere, so the app doesn't know which lines were filed. File the correction in the BZSt online portal.")
         }
     }
 
@@ -153,6 +164,8 @@ enum VatReturnTexts {
         case .identity(.name): return Text("Enter your name in the ELSTER settings.")
         case .identity(.steuernummer): return Text("Enter and check your Steuernummer in the ELSTER settings.")
         case .identity(.finanzamt): return Text("Choose your Finanzamt in the ELSTER settings.")
+        case .identity(.vatID): return Text("Enter your USt-IdNr (DE and nine digits) in the ELSTER settings.")
+        case .identity(.address): return Text("Enter your street, postal code and city in the ELSTER settings.")
         case .sondervorauszahlung: return Text("Enter the Sondervorauszahlung in the ELSTER settings.")
         }
     }
@@ -194,6 +207,14 @@ enum VatReturnTexts {
         case 26: Text("Don't use the direct debit mandate (Kz26)")
         case 29: Text("Offset a refund or refund assigned (Kz29)")
         default: Text(verbatim: "Kz\(number)")
+        }
+    }
+
+    /// The ZM Umsatzart.
+    static func umsatzart(_ art: ZMUmsatzart) -> Text {
+        switch art {
+        case .goods: Text("Goods (L)")
+        case .service: Text("Services (S)")
         }
     }
 

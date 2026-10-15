@@ -11,14 +11,14 @@ import SwiftData
 @Model
 public final class VatFiling {
     public var uid: String = UUID().uuidString
-    /// `VatFiling.Kind`: `ustva`, `sondervorauszahlung`, `dauerfristverlaengerung`.
+    /// `VatFiling.Kind`: `ustva`, `sondervorauszahlung`, `dauerfristverlaengerung`, `zm`.
     public var kind: String?
     /// The return's `VatReturnItem.id`, e.g. `2026-03` or `2026-sondervorauszahlung`.
     public var itemID: String?
     public var year: Int?
-    /// The UStVA `Zeitraum` (`01`–`12`, `41`–`44`); nil for the yearly returns.
+    /// The `Zeitraum` of the period (`01`–`12`, `41`–`44`), for a UStVA and a ZM; nil for the yearly returns.
     public var zeitraum: String?
-    /// The data type version sent, e.g. `UStVA_2026`.
+    /// The data type version sent, e.g. `UStVA_2026` or `ZMDO`.
     public var datenartVersion: String?
     /// JSON object of the Kennzahlen filed, number → decimal string, e.g. `{"81":"1000","83":"190.00"}`.
     public var kennzahlen: Data?
@@ -50,9 +50,13 @@ public final class VatFiling {
     public var errorCode: String?
     public var errorText: String?
     public var createdAt: Date = Date()
+    /// ZM only: JSON array of the full set of lines that stands for the period after this filing (customer VAT
+    /// ID, Umsatzart, whole euros). A correction sends only the changed lines (`requestXML`), but stores the full
+    /// set, so the next correction is computed against it.
+    public var zmLines: Data?
 
     public enum Kind: String, Sendable, CaseIterable {
-        case ustva, sondervorauszahlung, dauerfristverlaengerung
+        case ustva, sondervorauszahlung, dauerfristverlaengerung, zm
     }
 
     public enum State: String, Sendable, CaseIterable {
@@ -68,19 +72,22 @@ public final class VatFiling {
 
     public init() {}
 
-    /// A filing of `item` with the Kennzahlen filed (for the Sondervorauszahlung, Kz38).
+    /// A filing of `item` with the Kennzahlen filed (for the Sondervorauszahlung, Kz38). A ZM passes its report
+    /// (`zmReport`, its correction flag) and the full set of lines standing after it (`zmLines`).
     public convenience init(item: VatReturnItem, state: State, kennzahlen: [Kennzahl: Decimal], flags: UStVAFlags,
-                            isTest: Bool, sentAt: Date = Date()) {
+                            isTest: Bool, sentAt: Date = Date(), zmReport: ZMReport? = nil,
+                            zmLines: [ZMReportLine]? = nil) {
         self.init()
         kind = item.filingKind.rawValue
         itemID = item.id
         year = item.year
-        zeitraum = item.period?.zeitraum
+        zeitraum = (item.period ?? item.zmPeriod)?.zeitraum
         datenartVersion = item.datenartVersion
         self.kennzahlen = Self.encode(kennzahlen)
         kz83 = item.period != nil ? kennzahlen[.kz83].map(Money.plainString) : nil
         self.flags = flags.rawValue
-        isCorrection = flags.contains(.correction)
+        isCorrection = flags.contains(.correction) || zmReport?.meldeart == .corrected
+        self.zmLines = zmLines.flatMap(ZMReportLine.encode)
         self.isTest = isTest
         self.state = state.rawValue
         self.sentAt = sentAt
@@ -88,7 +95,8 @@ public final class VatFiling {
     }
 
     /// A return filed outside the app on the ISO `filedOn`, with its amount when known (Kz83 of a UStVA,
-    /// Kz38 of the Sondervorauszahlung). Always a production filing.
+    /// Kz38 of the Sondervorauszahlung; none for the Dauerfristverlängerung and the ZM). Always a production
+    /// filing. A ZM filed elsewhere stores no lines, so a correction of it can't be computed.
     public convenience init(filedElsewhere item: VatReturnItem, amount: Decimal?, filedOn: String?,
                             sentAt: Date = Date()) {
         var kennzahlen: [Kennzahl: Decimal] = [:]
@@ -96,7 +104,7 @@ public final class VatFiling {
             switch item.type {
             case .ustva: kennzahlen[.kz83] = amount
             case .sondervorauszahlung: kennzahlen[.kz38] = amount
-            case .dauerfristverlaengerung: break
+            case .dauerfristverlaengerung, .zm: break
             }
         }
         self.init(item: item, state: .filedElsewhere, kennzahlen: kennzahlen, flags: [], isTest: false, sentAt: sentAt)
@@ -108,11 +116,14 @@ public final class VatFiling {
     /// The Kennzahlen as stored; empty when unreadable.
     public var filedKennzahlen: [Kennzahl: Decimal] { Self.decode(kennzahlen) }
 
+    /// ZM: the lines standing after this filing; nil when none are stored (a ZM filed elsewhere, other returns).
+    public var filedZMLines: [ZMReportLine]? { ZMReportLine.decode(zmLines) }
+
     /// The filing as a value, for `VatFilings`.
     public var entry: VatFilingEntry {
         VatFilingEntry(uid: uid, itemID: itemID ?? "", state: filingState, isTest: isTest, isCorrection: isCorrection,
                        kennzahlen: filedKennzahlen, kz83: kz83.flatMap(Money.parse), date: sentAt ?? createdAt,
-                       ticket: ticket)
+                       ticket: ticket, zmLines: filedZMLines)
     }
 
     static func encode(_ kennzahlen: [Kennzahl: Decimal]) -> Data? {
@@ -157,6 +168,7 @@ extension VatReturnItem {
         case .ustva: return .ustva
         case .sondervorauszahlung: return .sondervorauszahlung
         case .dauerfristverlaengerung: return .dauerfristverlaengerung
+        case .zm: return .zm
         }
     }
 }
@@ -172,12 +184,14 @@ public struct VatFilingEntry: Sendable, Equatable, Identifiable {
     public var kz83: Decimal?
     public var date: Date
     public var ticket: String?
+    /// ZM: the lines standing after this filing (`VatFiling.zmLines`).
+    public var zmLines: [ZMReportLine]?
 
     public var id: String { uid }
 
     public init(uid: String = UUID().uuidString, itemID: String, state: VatFiling.State?, isTest: Bool = false,
                 isCorrection: Bool = false, kennzahlen: [Kennzahl: Decimal] = [:], kz83: Decimal? = nil,
-                date: Date = Date(), ticket: String? = nil) {
+                date: Date = Date(), ticket: String? = nil, zmLines: [ZMReportLine]? = nil) {
         self.uid = uid
         self.itemID = itemID
         self.state = state
@@ -187,6 +201,7 @@ public struct VatFilingEntry: Sendable, Equatable, Identifiable {
         self.kz83 = kz83 ?? kennzahlen[.kz83]
         self.date = date
         self.ticket = ticket
+        self.zmLines = zmLines
     }
 
     /// Counts as filed for production: accepted without the test marker, or filed elsewhere.
@@ -194,8 +209,8 @@ public struct VatFilingEntry: Sendable, Equatable, Identifiable {
         !isTest && (state == .accepted || state == .filedElsewhere)
     }
 
-    /// The return's main amount: Kz83 of a UStVA, else Kz38 of the Sondervorauszahlung.
-    public var amount: Decimal? { kz83 ?? kennzahlen[.kz38] }
+    /// The return's main amount: Kz83 of a UStVA, Kz38 of the Sondervorauszahlung, the sum of the lines of a ZM.
+    public var amount: Decimal? { kz83 ?? kennzahlen[.kz38] ?? zmLines.map { $0.reduce(0) { $0 + $1.amount } } }
 }
 
 /// A return's filings, read for its status, the send rules and the Sondervorauszahlung.
@@ -220,9 +235,16 @@ public struct VatFilings: Sendable, Equatable {
     /// The return was accepted with the test marker (shown next to the production status, which stays visible).
     public var filedInTest: Bool { entries.contains { $0.isTest && $0.state == .accepted } }
 
-    /// Sending again must be a corrected return (Kz10): the return was accepted for production or filed
-    /// elsewhere, so a second plain return for the period would be a duplicate filing.
+    /// Sending again must be a corrected return (Kz10; for the ZM `meldeart` 11): the return was accepted for
+    /// production or filed elsewhere, so a second plain return for the period would be a duplicate filing.
     public var requiresCorrection: Bool { entries.contains(where: \.isProductionFiled) }
+
+    /// ZM: what a correction is computed against. `.none` while nothing is filed for production; the lines of the
+    /// counted filing; or `.unknown` when it stores none (filed elsewhere), so the correction can't be computed.
+    public var zmCorrectionBasis: ZMCorrectionBasis {
+        guard requiresCorrection, let counted else { return .none }
+        return counted.zmLines.map(ZMCorrectionBasis.filed) ?? .unknown
+    }
 
     /// The latest send in this mode (test or production) has an uncertain outcome and nothing was accepted after
     /// it: sending again needs the user's explicit "I checked Mein ELSTER" confirmation.
@@ -278,7 +300,7 @@ public struct SondervorauszahlungBasis: Sendable, Equatable {
         var counted = 0
         for item in priorYearItems.sorted(by: { ($0.fileableFrom, $0.id) < ($1.fileableFrom, $1.id) }) {
             switch item.type {
-            case .dauerfristverlaengerung: continue
+            case .dauerfristverlaengerung, .zm: continue
             case .ustva, .sondervorauszahlung: break
             }
             guard let filing = byItem[item.id]?.counted else {
@@ -315,4 +337,14 @@ extension VatReturnSchedule {
         }
         return items
     }
+}
+
+/// What a ZM correction is computed against (`VatFilings.zmCorrectionBasis`).
+public enum ZMCorrectionBasis: Sendable, Equatable {
+    /// Nothing filed for production: the next report is the first one.
+    case none
+    /// The full set of lines filed for the period.
+    case filed([ZMReportLine])
+    /// Filed, but the lines are not known (filed elsewhere).
+    case unknown
 }

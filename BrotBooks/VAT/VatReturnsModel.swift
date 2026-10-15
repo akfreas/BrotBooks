@@ -7,7 +7,8 @@ import os
 import SwiftData
 
 /// The VAT returns screen's data and state: the returns of the current and previous year under the tax profile,
-/// each UStVA period's aggregation, the treatment review list, and the Validate / Preview runs.
+/// each UStVA period's aggregation, each ZM period's lines with their consistency and threshold checks, the
+/// treatment review list, and the Validate / Preview runs.
 @MainActor
 @Observable
 final class VatReturnsModel {
@@ -29,8 +30,17 @@ final class VatReturnsModel {
     private(set) var items: [VatReturnItem] = []
     /// Aggregation per UStVA item, by item id.
     private(set) var results: [String: UStVAResult] = [:]
-    /// Drafts dated in each UStVA period, by item id.
+    /// Drafts dated in each UStVA and ZM period, by item id.
     private(set) var draftIssues: [String: [UStVAIssue]] = [:]
+    /// The aggregation of each ZM period by record date, by item id: its `zmLines` and their issues.
+    private(set) var zmResults: [String: UStVAResult] = [:]
+    /// The ZM's agreement with Kz41 and Kz21 of the UStVAs of the same months, by ZM item id; missing when no
+    /// UStVA covers the period.
+    private(set) var consistency: [String: ZMConsistency] = [:]
+    /// Quarterly ZM items whose EU goods deliveries exceed the threshold, by item id.
+    private(set) var thresholdWarnings: [String: ZMThresholdWarning] = [:]
+    /// The ZM line (customer VAT ID and Umsatzart) whose records are shown.
+    var selectedZMLine: ZMLine?
     /// Records with an unconfirmed treatment in the open periods.
     private(set) var review: [VatTreatmentReview.Entry] = []
     /// Every record (drafts and removed ones included), by uid.
@@ -40,7 +50,12 @@ final class VatReturnsModel {
 
     /// The selected item's id.
     var selection: String? {
-        didSet { if selection != oldValue { selectedKennzahl = nil } }
+        didSet {
+            if selection != oldValue {
+                selectedKennzahl = nil
+                selectedZMLine = nil
+            }
+        }
     }
     /// The Kennzahl row whose contributing records are shown.
     var selectedKennzahl: Kennzahl?
@@ -92,15 +107,25 @@ final class VatReturnsModel {
             let filings = Dictionary(grouping: allFilings) { $0.itemID ?? "" }
 
             var results: [String: UStVAResult] = [:]
+            var zmResults: [String: UStVAResult] = [:]
             var drafts: [String: [UStVAIssue]] = [:]
             for item in items {
-                guard let period = item.period else { continue }
-                results[item.id] = item.aggregate(records)
-                drafts[item.id] = UStVAAggregator.draftIssues(records, period: period)
+                if let period = item.period {
+                    results[item.id] = item.aggregate(records)
+                    drafts[item.id] = UStVAAggregator.draftIssues(records, period: period)
+                } else if let period = item.zmPeriod {
+                    zmResults[item.id] = UStVAAggregator.zmAggregate(records, period: period,
+                                                                     configuration: item.configuration)
+                    drafts[item.id] = UStVAAggregator.draftIssues(records, period: period)
+                }
             }
+            let checks = Self.zmChecks(items: items, results: results, zmResults: zmResults, filings: filings)
 
             self.settings = settings
-            self.items = items
+            self.items = VatReturnSchedule.listOrder(items)
+            self.zmResults = zmResults
+            consistency = checks.consistency
+            thresholdWarnings = checks.threshold
             self.filings = filings
             self.results = results
             self.draftIssues = drafts
@@ -116,6 +141,78 @@ final class VatReturnsModel {
         }
     }
 
+    /// The consistency of each ZM with the UStVAs of the same months, and the threshold warning of each quarterly ZM.
+    /// A UStVA counts with the Kennzahlen of its accepted production filing, else with the computed ones.
+    static func zmChecks(items: [VatReturnItem], results: [String: UStVAResult], zmResults: [String: UStVAResult],
+                         filings: [String: [VatFiling]])
+        -> (consistency: [String: ZMConsistency], threshold: [String: ZMThresholdWarning]) {
+        var ustva: [VatPeriod: Kennzahlen] = [:]
+        var zmLines: [VatPeriod: [ZMLine]] = [:]
+        for item in items {
+            if let period = item.period, let result = results[item.id] {
+                let counted = VatFilings((filings[item.id] ?? []).map(\.entry)).counted
+                if let counted, counted.state == .accepted, !counted.kennzahlen.isEmpty {
+                    ustva[period] = Kennzahlen(values: counted.kennzahlen, form: result.kennzahlen.form)
+                } else {
+                    ustva[period] = result.kennzahlen
+                }
+            } else if let period = item.zmPeriod {
+                zmLines[period] = zmResults[item.id]?.zmLines ?? []
+            }
+        }
+        var consistency: [String: ZMConsistency] = [:]
+        var threshold: [String: ZMThresholdWarning] = [:]
+        for item in items {
+            guard let period = item.zmPeriod else { continue }
+            consistency[item.id] = ZMConsistency.check(zmPeriod: period, zmLines: zmLines, ustva: ustva)
+            if period.length == .quarter {
+                let goods = (zmLines[period] ?? []).filter { $0.umsatzart == .goods }.reduce(Decimal(0)) { $0 + $1.amount }
+                threshold[item.id] = ZMThresholdWarning.check(euGoodsDeliveries: goods, quarter: period,
+                                                              configuration: item.configuration)
+            }
+        }
+        return (consistency, threshold)
+    }
+
+    /// The ZM checks that disagree with `item`'s Kennzahlen: for a ZM its own, for a UStVA those of every ZM whose
+    /// comparison includes its period.
+    func consistencyMismatches(_ item: VatReturnItem) -> [ZMConsistency] {
+        if item.zmPeriod != nil {
+            return consistency[item.id].map { $0.matches ? [] : [$0] } ?? []
+        }
+        guard let period = item.period else { return [] }
+        var seen: [ZMConsistency] = []
+        for check in consistency.values where !check.matches && check.ustvaPeriods.contains(period)
+            && !seen.contains(check) {
+            seen.append(check)
+        }
+        return seen.sorted { ($0.zmPeriods.first ?? period) < ($1.zmPeriods.first ?? period) }
+    }
+
+    // MARK: ZM
+
+    /// The full set of lines the ZM of `item` reports (whole euros, zero lines left out).
+    func zmReportable(_ item: VatReturnItem) -> [ZMReportLine] {
+        ZMReport.reportable(zmResults[item.id]?.zmLines ?? [])
+    }
+
+    /// What the ZM of `item` sends now: the first report, or the correction of the filed lines; nil when a
+    /// correction is needed but the filed lines are unknown (marked as filed elsewhere).
+    func zmReport(_ item: VatReturnItem) -> ZMReport? {
+        guard item.zmPeriod != nil else { return nil }
+        let lines = zmResults[item.id]?.zmLines ?? []
+        switch filingSummary(item).zmCorrectionBasis {
+        case .none: return ZMReport.initial(lines)
+        case .filed(let filed): return ZMReport.make(lines, filed: filed)
+        case .unknown: return nil
+        }
+    }
+
+    /// A ZM whose period has no EU B2B sales: no report is owed.
+    func zmHasNothingToReport(_ item: VatReturnItem) -> Bool {
+        item.zmPeriod != nil && zmReportable(item).isEmpty
+    }
+
     // MARK: Status
 
     /// The filings of `item`, as values.
@@ -127,20 +224,36 @@ final class VatReturnsModel {
     func filingMark(for item: VatReturnItem) -> VatFilingMark? { filingSummary(item).mark }
 
     func status(_ item: VatReturnItem) -> VatReturnStatus {
-        VatReturnStatus.of(item, today: today, filing: filingMark(for: item))
+        VatReturnStatus.of(item, today: today, filing: filingMark(for: item),
+                           nothingToReport: zmHasNothingToReport(item))
     }
 
     /// The return was accepted with the test marker (shown next to its production status).
     func filedInTest(_ item: VatReturnItem) -> Bool { filingSummary(item).filedInTest }
 
-    /// The warnings of a UStVA item: drafts first, then the aggregation's issues.
+    /// The warnings of a UStVA or ZM item: drafts first, then the aggregation's issues (for a ZM those about its
+    /// income records, which alone can be EU sales: treatments, EUR amounts and customer VAT IDs).
     func warnings(_ item: VatReturnItem) -> [UStVAIssue] {
-        (draftIssues[item.id] ?? []) + (results[item.id]?.issues ?? [])
+        if let zm = zmResults[item.id] {
+            return ((draftIssues[item.id] ?? []) + zm.issues.filter { Self.zmIssueCodes.contains($0.code) })
+                .filter { $0.kind == .income }
+        }
+        return (draftIssues[item.id] ?? []) + (results[item.id]?.issues ?? [])
     }
 
-    /// Sending is blocked while the period has records with an unconfirmed treatment.
+    static let zmIssueCodes: Set<UStVAIssue.Code> = [
+        .unconfirmedTreatment, .missingEURAmount, .missingCustomerVatID, .implausibleCustomerVatID,
+    ]
+
+    /// The warnings shown as a count in the list: the record warnings plus a ZM mismatch or threshold warning.
+    func warningCount(_ item: VatReturnItem) -> Int {
+        warnings(item).count + consistencyMismatches(item).count + (thresholdWarnings[item.id] == nil ? 0 : 1)
+    }
+
+    /// Sending is blocked while the period has records with an unconfirmed treatment (for a ZM: income records).
     func blocksSending(_ item: VatReturnItem) -> Bool {
-        results[item.id]?.blocksSending ?? false
+        if zmResults[item.id] != nil { return warnings(item).contains(where: \.blocksSending) }
+        return results[item.id]?.blocksSending ?? false
     }
 
     // MARK: Building
@@ -155,7 +268,8 @@ final class VatReturnsModel {
     func blockers(_ item: VatReturnItem) -> [Blocker] {
         var blockers: [Blocker] = []
         if EricRuntime.herstellerID == nil { blockers.append(.herstellerID) }
-        blockers += item.configuration.identity.missingForFiling.map(Blocker.identity)
+        let identity = item.configuration.identity
+        blockers += (item.zmPeriod != nil ? identity.missingForZM : identity.missingForFiling).map(Blocker.identity)
         if case .sondervorauszahlung = item.type, item.needsSondervorauszahlungAmount {
             blockers.append(.sondervorauszahlung)
         }
@@ -167,8 +281,11 @@ final class VatReturnsModel {
         return UStVAXML.header(herstellerID: EricRuntime.herstellerID ?? "", produktVersion: version, today: today)
     }
 
+    /// The return's XML; nil for a ZM with no lines to send.
     func xml(_ item: VatReturnItem) -> String? {
-        item.xml(result: results[item.id], flags: flags[item.id] ?? [], header: header)
+        let report = zmReport(item)
+        if item.zmPeriod != nil, report?.lines.isEmpty ?? true { return nil }
+        return item.xml(result: results[item.id], flags: flags[item.id] ?? [], header: header, zmReport: report)
     }
 
     // MARK: ERiC
@@ -213,6 +330,7 @@ final class VatReturnsModel {
         case .ustva(let period): return "UStVA \(period.year)-\(period.zeitraum)"
         case .sondervorauszahlung(let year): return "Sondervorauszahlung \(year)"
         case .dauerfristverlaengerung(let year): return "Dauerfristverlaengerung \(year)"
+        case .zm(let period): return "ZM \(period.year)-\(period.zeitraum)"
         }
     }
 
@@ -230,6 +348,14 @@ final class VatReturnsModel {
         case correctionRequired
         /// The return was filed already and this kind of return has no Kz10.
         case alreadyFiled
+        /// ZM: no EU B2B sales in the period.
+        case nothingToReport
+        /// ZM: a line has no customer VAT ID.
+        case missingCustomerVatID
+        /// ZM: filed already, and nothing changed since.
+        case nothingToCorrect
+        /// ZM: marked as filed elsewhere, so the filed lines a correction needs are unknown.
+        case correctionBasisUnknown
         case sending
     }
 
@@ -245,10 +371,27 @@ final class VatReturnsModel {
         } else {
             blockers.append(.notValidated)
         }
-        if filingSummary(item).requiresCorrection && !(flags[item.id] ?? []).contains(.correction) {
+        if item.zmPeriod != nil {
+            blockers += zmSendBlockers(item)
+        } else if filingSummary(item).requiresCorrection && !(flags[item.id] ?? []).contains(.correction) {
             blockers.append(item.availableFlags.contains { $0.flag == .correction } ? .correctionRequired : .alreadyFiled)
         }
         if running[item.id] != nil { blockers.append(.sending) }
+        return blockers
+    }
+
+    /// The ZM's own reasons not to send: nothing to report or correct, a line without VAT ID, unknown filed lines.
+    /// A ZM that was filed is sent again as a correction (`meldeart` 11) without a flag to set.
+    func zmSendBlockers(_ item: VatReturnItem) -> [SendBlocker] {
+        var blockers: [SendBlocker] = []
+        if (zmResults[item.id]?.zmLines ?? []).contains(where: { $0.customerVatID.isEmpty }) {
+            blockers.append(.missingCustomerVatID)
+        }
+        switch filingSummary(item).zmCorrectionBasis {
+        case .unknown: blockers.append(.correctionBasisUnknown)
+        case .filed: if zmReport(item)?.lines.isEmpty ?? true { blockers.append(.nothingToCorrect) }
+        case .none: if zmHasNothingToReport(item) { blockers.append(.nothingToReport) }
+        }
         return blockers
     }
 
@@ -360,7 +503,8 @@ final class VatReturnsModel {
         }
         let sentAt = Date()
         let filing = VatFiling(item: item, state: state, kennzahlen: filedKennzahlen(item), flags: flags,
-                               isTest: item.configuration.testMode, sentAt: sentAt)
+                               isTest: item.configuration.testMode, sentAt: sentAt, zmReport: zmReport(item),
+                               zmLines: item.zmPeriod != nil ? zmReportable(item) : nil)
         filing.ticket = outcome.ticket
         filing.requestXML = xml
         filing.serverResponse = result.serverAnswer.isEmpty ? nil : result.serverAnswer
@@ -394,21 +538,24 @@ final class VatReturnsModel {
         return filing.uid
     }
 
-    /// The Kennzahlen `item` files: the period's for a UStVA, Kz38 for the Sondervorauszahlung.
+    /// The Kennzahlen `item` files: the period's for a UStVA, Kz38 for the Sondervorauszahlung; none for the ZM,
+    /// which stores its lines.
     func filedKennzahlen(_ item: VatReturnItem) -> [Kennzahl: Decimal] {
         switch item.type {
         case .ustva: return results[item.id]?.kennzahlen.values ?? [:]
         case .sondervorauszahlung: return item.sondervorauszahlung.map { [.kz38: $0] } ?? [:]
-        case .dauerfristverlaengerung: return [:]
+        case .dauerfristverlaengerung, .zm: return [:]
         }
     }
 
-    /// The amount shown for `item` before sending: Kz83, or Kz38 for the Sondervorauszahlung.
-    func mainAmount(_ item: VatReturnItem) -> (kennzahl: Kennzahl, amount: Decimal)? {
+    /// The amount shown for `item` before sending: Kz83, Kz38 for the Sondervorauszahlung, or the sum of the lines
+    /// a ZM sends (no Kennzahl).
+    func mainAmount(_ item: VatReturnItem) -> (kennzahl: Kennzahl?, amount: Decimal)? {
         switch item.type {
         case .ustva: return results[item.id].map { (.kz83, $0.kennzahlen.kz83) }
         case .sondervorauszahlung: return item.sondervorauszahlung.map { (.kz38, $0) }
         case .dauerfristverlaengerung: return nil
+        case .zm: return zmReport(item).flatMap { $0.lines.isEmpty ? nil : (nil, $0.total) }
         }
     }
 
@@ -436,7 +583,9 @@ final class VatReturnsModel {
     /// The returns of `year` past their due date with no production filing: what "Mark All Past Periods as Filed
     /// Elsewhere" marks.
     func pastUnfiledItems(year: Int) -> [VatReturnItem] {
-        items.filter { $0.year == year && $0.dueDate < today && filingMark(for: $0) == nil }
+        items.filter {
+            $0.year == year && $0.dueDate < today && filingMark(for: $0) == nil && !zmHasNothingToReport($0)
+        }
     }
 
     /// Marks every past, unfiled return of `year` as filed elsewhere, without amounts.

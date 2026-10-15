@@ -1,12 +1,14 @@
 import Foundation
 
-/// One return on the VAT returns screen: a UStVA for a period, the yearly Sondervorauszahlung, or the
-/// application for a Dauerfristverlängerung. Built by `VatReturnSchedule` from the configuration in force.
+/// One return on the VAT returns screen: a UStVA for a period, the yearly Sondervorauszahlung, the
+/// application for a Dauerfristverlängerung, or the Zusammenfassende Meldung (ZM) for a period. Built by `VatReturnSchedule` from the configuration in force.
 public struct VatReturnItem: Sendable, Equatable, Identifiable {
     public enum ReturnType: Sendable, Hashable {
         case ustva(VatPeriod)
         case sondervorauszahlung(year: Int)
         case dauerfristverlaengerung(year: Int)
+        /// The Zusammenfassende Meldung for a month or quarter (ZM frequency).
+        case zm(VatPeriod)
     }
 
     public var type: ReturnType
@@ -31,10 +33,12 @@ public struct VatReturnItem: Sendable, Equatable, Identifiable {
         self.sondervorauszahlungBasis = sondervorauszahlungBasis
     }
 
-    /// Stable across reloads: `2026-03`, `2026-41`, `2026-sondervorauszahlung`, `2026-dauerfristverlaengerung`.
+    /// Stable across reloads: `2026-03`, `2026-41`, `2026-sondervorauszahlung`, `2026-dauerfristverlaengerung`,
+    /// `2026-03-zm`, `2026-41-zm`.
     public var id: String {
         switch type {
         case .ustva(let period): return period.description
+        case .zm(let period): return "\(period.description)-zm"
         case .sondervorauszahlung(let year): return "\(year)-sondervorauszahlung"
         case .dauerfristverlaengerung(let year): return "\(year)-dauerfristverlaengerung"
         }
@@ -42,18 +46,28 @@ public struct VatReturnItem: Sendable, Equatable, Identifiable {
 
     public var year: Int {
         switch type {
-        case .ustva(let period): return period.year
+        case .ustva(let period), .zm(let period): return period.year
         case .sondervorauszahlung(let year), .dauerfristverlaengerung(let year): return year
         }
     }
 
+    /// The UStVA period; nil for the other returns.
     public var period: VatPeriod? {
         if case .ustva(let period) = type { return period }
         return nil
     }
 
-    /// The UStVA data type version ERiC validates the return as, e.g. `UStVA_2026`.
-    public var datenartVersion: String { UStVAXML.datenartVersion(year: year) }
+    /// The ZM period; nil for the other returns.
+    public var zmPeriod: VatPeriod? {
+        if case .zm(let period) = type { return period }
+        return nil
+    }
+
+    /// The data type version ERiC validates the return as: `UStVA_2026`, or `ZMDO` for the ZM.
+    public var datenartVersion: String {
+        if case .zm = type { return ZMCodes.datenartVersion }
+        return UStVAXML.datenartVersion(year: year)
+    }
 
     /// The Sondervorauszahlung this return files (Kz38) or credits (Kz39 in December): the amount entered in the
     /// settings, else 1/11 of the prior year's advance payments from its filings
@@ -82,7 +96,7 @@ public struct VatReturnItem: Sendable, Equatable, Identifiable {
         case .sondervorauszahlung: return true
         case .ustva(let period):
             return configuration.requiresSondervorauszahlung && period.length == .month && period.lastMonth == 12
-        case .dauerfristverlaengerung: return false
+        case .dauerfristverlaengerung, .zm: return false
         }
     }
 
@@ -93,14 +107,19 @@ public struct VatReturnItem: Sendable, Equatable, Identifiable {
         case .ustva: return UStVAFlags.numbers.filter { form.elementOrder.contains($0.number) }
         case .sondervorauszahlung:
             return UStVAFlags.numbers.filter { form.sondervorauszahlungElementOrder.contains($0.number) }
-        case .dauerfristverlaengerung: return []
+        case .dauerfristverlaengerung, .zm: return []
         }
     }
 
     /// The return's XML, or nil while a needed Sondervorauszahlung amount is missing for the
-    /// Sondervorauszahlung return. `result` is the period's aggregation (UStVA only).
-    public func xml(result: UStVAResult?, flags: UStVAFlags, header: UStVAXML.Header) -> String? {
+    /// Sondervorauszahlung return. `result` is the period's aggregation (UStVA only); `zmReport` what the ZM
+    /// sends (ZM only).
+    public func xml(result: UStVAResult?, flags: UStVAFlags, header: UStVAXML.Header,
+                    zmReport: ZMReport? = nil) -> String? {
         switch type {
+        case .zm(let period):
+            guard let zmReport else { return nil }
+            return ZMXML.build(period: period, report: zmReport, configuration: configuration, header: header)
         case .ustva(let period):
             guard let result else { return nil }
             return UStVAXML.build(period: period, kennzahlen: result.kennzahlen, flags: flags,
@@ -114,8 +133,14 @@ public struct VatReturnItem: Sendable, Equatable, Identifiable {
         }
     }
 
+    /// The ZM lines of `records` for a ZM item (by record date); nil for the other returns.
+    public func zmLines(_ records: [UStVARecord]) -> [ZMLine]? {
+        guard let zmPeriod else { return nil }
+        return UStVAAggregator.zmLines(records, period: zmPeriod, configuration: configuration)
+    }
+
     /// The period's aggregation of `records`, crediting the Sondervorauszahlung in December; nil for the yearly
-    /// returns.
+    /// returns and the ZM.
     public func aggregate(_ records: [UStVARecord]) -> UStVAResult? {
         guard let period else { return nil }
         return UStVAAggregator.aggregate(records, period: period, configuration: configuration,
@@ -143,12 +168,17 @@ public enum VatReturnStatus: Sendable, Equatable {
     case overdue(days: Int)
     /// A send may have arrived; check Mein ELSTER. Replaces the due status, so it never shows as overdue.
     case uncertain
+    /// A ZM whose period ended without EU B2B sales: no report is owed (nil reports are not allowed, rule
+    /// `Meldezeile_Pflicht` of `Jahresdokumentation_ZMDO_2.ods`).
+    case nothingToReport
     case filedElsewhere
     case filed
 
     /// `item` on the ISO `today`, given its production filing mark. Test filings don't change the status: the
-    /// production due status stays visible next to them.
-    public static func of(_ item: VatReturnItem, today: String, filing: VatFilingMark? = nil) -> VatReturnStatus {
+    /// production due status stays visible next to them. `nothingToReport` (a ZM without lines) replaces the due
+    /// status once the period has ended.
+    public static func of(_ item: VatReturnItem, today: String, filing: VatFilingMark? = nil,
+                          nothingToReport: Bool = false) -> VatReturnStatus {
         switch filing {
         case .production: return .filed
         case .elsewhere: return .filedElsewhere
@@ -156,17 +186,19 @@ public enum VatReturnStatus: Sendable, Equatable {
         case nil: break
         }
         if today < item.fileableFrom { return .notDue }
+        if nothingToReport { return .nothingToReport }
         let days = ISODate.days(from: today, to: item.dueDate) ?? 0
         return days >= 0 ? .dueIn(days: days) : .overdue(days: -days)
     }
 
-    /// Not filed for production (an uncertain send still counts as open).
-    public var isOpen: Bool { self != .filed && self != .filedElsewhere }
+    /// Not filed for production (an uncertain send still counts as open); a ZM with nothing to report is not open.
+    public var isOpen: Bool { self != .filed && self != .filedElsewhere && self != .nothingToReport }
 }
 
 /// The returns to show: per year, the UStVA periods of the configured frequency, plus the Sondervorauszahlung
-/// (monthly filing with Dauerfristverlängerung) and the Dauerfristverlängerung application (quarterly filing
-/// with Dauerfristverlängerung; monthly filers apply with the Sondervorauszahlung).
+/// (monthly filing with Dauerfristverlängerung), the Dauerfristverlängerung application (quarterly filing
+/// with Dauerfristverlängerung; monthly filers apply with the Sondervorauszahlung) and the ZM periods of the
+/// configured ZM frequency.
 public enum VatReturnSchedule {
     /// The returns of `years` under `settings`, newest due date first.
     ///
@@ -192,6 +224,8 @@ public enum VatReturnSchedule {
                                            fileableFrom: ISODate.adding(days: 1, to: period.end)!))
             }
 
+            items += zmItems(year: year, settings: settings)
+
             let january = ISODate.make(year, 1, 1)
             guard let configuration = settings.configuration(on: january) else { continue }
             if let due = configuration.deadlines.sondervorauszahlungDueDate(year: year, configuration: configuration) {
@@ -207,6 +241,49 @@ public enum VatReturnSchedule {
             }
         }
         return items.sorted { ($0.dueDate, $0.id) > ($1.dueDate, $1.id) }
+    }
+
+    /// The ZM periods of `year`, each under the settings in force on its first day, as for the UStVA: a quarter
+    /// when quarterly ZM filing is in force on its first day, otherwise a month. Due on the 25th after the period
+    /// (`FilingDeadlines.zmDueDate`), not moved by the Dauerfristverlängerung.
+    static func zmItems(year: Int, settings: TaxSettings) -> [VatReturnItem] {
+        var items: [VatReturnItem] = []
+        var covered: VatPeriod?
+        for month in 1...12 {
+            let start = ISODate.make(year, month, 1)
+            if let covered, covered.contains(start) { continue }
+            guard let configuration = settings.configuration(on: start) else { continue }
+            let frequency: FilingFrequency = configuration.zmFrequency == .monthly ? .monthly : .quarterly
+            guard let containing = VatPeriod.containing(start, frequency: frequency) else { continue }
+            let period = containing.start == start ? containing : VatPeriod.month(year, month)
+            covered = period
+            items.append(VatReturnItem(type: .zm(period), configuration: configuration,
+                                       dueDate: period.zmDueDate(configuration),
+                                       fileableFrom: ISODate.adding(days: 1, to: period.end)!))
+        }
+        return items
+    }
+
+    /// `items` in list order: each ZM directly after the UStVA whose period contains the ZM period's last month
+    /// (its ZM shows next to the UStVA of the same months); the other items, and a ZM without such a UStVA, keep
+    /// their order.
+    public static func listOrder(_ items: [VatReturnItem]) -> [VatReturnItem] {
+        func host(_ zm: VatPeriod) -> String? {
+            let lastDay = ISODate.make(zm.year, zm.lastMonth, 1)
+            return items.first { $0.period?.contains(lastDay) == true }?.id
+        }
+        var attached: [String: [VatReturnItem]] = [:]
+        var rest: [VatReturnItem] = []
+        for item in items {
+            if let zm = item.zmPeriod, let host = host(zm) {
+                attached[host, default: []].append(item)
+            } else {
+                rest.append(item)
+            }
+        }
+        return rest.flatMap { item in
+            [item] + (attached[item.id] ?? []).sorted { $0.zmPeriod! > $1.zmPeriod! }
+        }
     }
 }
 
@@ -248,6 +325,10 @@ public enum VatTreatmentReview {
 /// What a return needs from the tax profile before ERiC can validate or preview it.
 public enum FilingRequirement: String, Sendable, Hashable, CaseIterable {
     case name, steuernummer, finanzamt
+    /// The USt-IdNr (`DE` and nine digits), for the ZM.
+    case vatID
+    /// Street, postal code and city, for the ZM.
+    case address
 }
 
 extension TaxIdentity {
