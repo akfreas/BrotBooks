@@ -6,6 +6,8 @@
 	<array>
 		<string>$(PRODUCT_BUNDLE_IDENTIFIER).invoiceImport.*</string>
 	</array>
+	<key>ElsterHerstellerID</key>
+	<string>$(ELSTER_HERSTELLER_ID)</string>
 	<key>NSUbiquitousContainers</key>
 	<dict>
 		<key>$(SL_ICLOUD_CONTAINER)</key>

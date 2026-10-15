@@ -3,6 +3,9 @@ SL_BUNDLE_ID = me.freas.BrotBooks
 SL_ICLOUD_CONTAINER = iCloud.me.freas.BrotBooks
 SL_TEAM = KGJCC745S9
 
+// ELSTER Hersteller-ID for ERiC submissions (TransferHeader/HerstellerID); read from Info.plist key ElsterHerstellerID.
+ELSTER_HERSTELLER_ID = 27425
+
 PRODUCT_BUNDLE_IDENTIFIER = $(SL_BUNDLE_ID)
 DEVELOPMENT_TEAM = $(SL_TEAM)
 PRODUCT_NAME = BrotBooks
