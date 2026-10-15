@@ -29,3 +29,9 @@ xcuserdata/
 __pycache__/
 *.py[cod]
 .venv/
+
+# ERiC SDK: the jar and its extracted folder stay local; scripts/vendor-eric.sh fills Vendor/ERiC.
+Vendor/ERiC/
+ERiC-*/
+*.jar
+*.pfx
