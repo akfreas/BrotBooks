@@ -51,5 +51,9 @@ ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor
 ENABLE_PREVIEWS = YES
 SWIFT_EMIT_LOC_STRINGS = YES
 LOCALIZATION_PREFERS_STRING_CATALOGS = YES
+// File lists for the macOS-only Embed ERiC build phase (project.yml), written by scripts/vendor-eric.sh.
+ERIC_EMBED_INPUTS[sdk=macosx*] = $(SRCROOT)/Vendor/ERiC/inputs.xcfilelist
+ERIC_EMBED_OUTPUTS[sdk=macosx*] = $(SRCROOT)/Vendor/ERiC/outputs.xcfilelist
+
 LD_RUNPATH_SEARCH_PATHS[sdk=macosx*] = $(inherited) @executable_path/../Frameworks
 LD_RUNPATH_SEARCH_PATHS[sdk=iphone*] = $(inherited) @executable_path/Frameworks

@@ -6,6 +6,7 @@
 #   scripts/build.sh ios-sim        # iOS Simulator build (no signing needed)
 #   scripts/build.sh test           # BrotBooksKit unit tests (swift test)
 #
+# The macOS build needs Vendor/ERiC (scripts/vendor-eric.sh <ERiC jar>).
 # The Xcode project is generated from project.yml with XcodeGen before every build.
 # Products land in apple/build/<platform>/; the .app path is printed at the end.
 set -euo pipefail
@@ -14,6 +15,12 @@ cd "$(dirname "$0")/.."
 target="${1:-mac}"
 signed="${2:-}"
 derived="build/DerivedData"
+
+if [ "$target" = mac ] && [ ! -f Vendor/ERiC/libericapi.dylib ]; then
+  echo "error: Vendor/ERiC is missing. The macOS app embeds the ELSTER library ERiC; vendor it once with" >&2
+  echo "       scripts/vendor-eric.sh <path-to-ERiC-<version>-Darwin-universal.jar>" >&2
+  exit 1
+fi
 
 if [ "$target" != test ]; then
   command -v xcodegen >/dev/null || { echo "XcodeGen is required: brew install xcodegen" >&2; exit 1; }

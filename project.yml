@@ -35,6 +35,9 @@ settings:
 packages:
   BrotBooksKit:
     path: BrotBooksKit
+  # ELSTER bridge, macOS only. Needs Vendor/ERiC: run scripts/vendor-eric.sh <ERiC jar> once.
+  EricKit:
+    path: EricKit
 
 targets:
   BrotBooks:
@@ -51,6 +54,20 @@ targets:
         type: syncedFolder
     dependencies:
       - package: BrotBooksKit
+      - package: EricKit
+        destinationFilters: [macOS]
+    postBuildScripts:
+      # macOS only (the script exits on other platforms): embed Vendor/ERiC and sign its dylibs.
+      - name: Embed ERiC
+        path: scripts/embed-eric.sh
+        shell: /bin/bash
+        basedOnDependencyAnalysis: false
+        # Written by scripts/vendor-eric.sh: Xcode's script sandbox only allows the files listed here.
+        # Empty outside macOS (Config/BrotBooks.xcconfig), so iOS builds need no Vendor/ERiC.
+        inputFileLists:
+          - $(ERIC_EMBED_INPUTS)
+        outputFileLists:
+          - $(ERIC_EMBED_OUTPUTS)
 
   BrotBooksUITests:
     type: bundle.ui-testing
