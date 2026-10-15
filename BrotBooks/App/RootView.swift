@@ -26,6 +26,9 @@ enum Destination: Hashable, CaseIterable {
 struct RootView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.horizontalSizeClass) private var sizeClass
+    #if DEBUG && os(macOS)
+    @Environment(\.openSettings) private var openSettings
+    #endif
     @State private var photoSelection: [PhotosPickerItem] = []
 
     var body: some View {
@@ -58,7 +61,7 @@ struct RootView: View {
         .task {
             await app.start()
             #if DEBUG && os(macOS)
-            await SnapshotAgent.run(app: app)
+            await SnapshotAgent.run(app: app, openSettings: { openSettings() })
             #endif
         }
         .sheet(item: $app.editor) { target in
