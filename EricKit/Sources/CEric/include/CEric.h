@@ -23,6 +23,12 @@ typedef int (*CEricMtRueckgabepufferFreigeben)(EricInstanzHandle instanz, EricRu
 typedef const char *(*CEricMtRueckgabepufferInhalt)(EricInstanzHandle instanz, EricRueckgabepufferHandle handle);
 typedef uint32_t (*CEricMtRueckgabepufferLaenge)(EricInstanzHandle instanz, EricRueckgabepufferHandle handle);
 typedef int (*CEricMtVersion)(EricInstanzHandle instanz, EricRueckgabepufferHandle rueckgabeXmlPuffer);
+typedef int (*CEricMtBearbeiteVorgang)(EricInstanzHandle instanz, const char *datenpuffer, const char *datenartVersion,
+                                       uint32_t bearbeitungsFlags, const eric_druck_parameter_t *druckParameter,
+                                       const eric_verschluesselungs_parameter_t *cryptoParameter,
+                                       EricRueckgabepufferHandle rueckgabeXmlPuffer,
+                                       EricRueckgabepufferHandle serverantwortXmlPuffer);
+typedef int (*CEricMtHoleFehlerText)(EricInstanzHandle instanz, int fehlerkode, EricRueckgabepufferHandle rueckgabePuffer);
 
 /// The resolved ERiC functions. Every field is non-NULL after a successful CEricLoad().
 typedef struct CEricAPI {
@@ -33,6 +39,8 @@ typedef struct CEricAPI {
     CEricMtRueckgabepufferInhalt EricMtRueckgabepufferInhalt;
     CEricMtRueckgabepufferLaenge EricMtRueckgabepufferLaenge;
     CEricMtVersion EricMtVersion;
+    CEricMtBearbeiteVorgang EricMtBearbeiteVorgang;
+    CEricMtHoleFehlerText EricMtHoleFehlerText;
 } CEricAPI;
 
 /// Loads libericapi.dylib from `libraryPath` (absolute, file-system representation) with

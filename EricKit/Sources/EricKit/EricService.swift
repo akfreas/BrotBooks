@@ -87,6 +87,54 @@ public actor EricService {
         return info
     }
 
+    /// Checks `xml` locally against the schema and plausibility rules of `datenartVersion` (e.g. `UStVA_2026`)
+    /// with `ERIC_VALIDIERE | ERIC_PRUEFE_HINWEISE`; nothing is sent. Rule errors and hints come back in the
+    /// result, as do other ERiC error codes (with `EricMtHoleFehlerText`); only failures to load or call ERiC
+    /// throw.
+    public func validate(xml: String, datenartVersion: String) throws(EricError) -> EricValidationResult {
+        try withInstance { api, instance throws(EricError) in
+            guard let buffer = api.EricMtRueckgabepufferErzeugen(instance) else {
+                throw .callFailed(function: "EricMtRueckgabepufferErzeugen", code: -1)
+            }
+            defer { _ = api.EricMtRueckgabepufferFreigeben(instance, buffer) }
+            guard let serverBuffer = api.EricMtRueckgabepufferErzeugen(instance) else {
+                throw .callFailed(function: "EricMtRueckgabepufferErzeugen", code: -1)
+            }
+            defer { _ = api.EricMtRueckgabepufferFreigeben(instance, serverBuffer) }
+
+            let flags = UInt32(ERIC_VALIDIERE.rawValue | ERIC_PRUEFE_HINWEISE.rawValue)
+            let code = xml.withCString { data in
+                datenartVersion.withCString { version in
+                    api.EricMtBearbeiteVorgang(instance, data, version, flags, nil, nil, buffer, serverBuffer)
+                }
+            }
+            let response = api.EricMtRueckgabepufferInhalt(instance, buffer).map { String(cString: $0) } ?? ""
+            switch code {
+            case Int32(ERIC_OK.rawValue), Int32(ERIC_GLOBAL_PRUEF_FEHLER.rawValue), Int32(ERIC_GLOBAL_HINWEISE.rawValue):
+                guard let parsed = EricValidationResult.parse(response) else {
+                    throw .malformedResult(function: "EricMtBearbeiteVorgang")
+                }
+                return EricValidationResult(code: code, errors: parsed.errors, hints: parsed.hints, response: response)
+            default:
+                let text = errorText(code, api: api, instance: instance)
+                Self.log.error("EricMtBearbeiteVorgang \(datenartVersion, privacy: .public) failed: \(code) \(text ?? "", privacy: .public)")
+                let parsed = EricValidationResult.parse(response)
+                return EricValidationResult(code: code, errors: parsed?.errors ?? [], hints: parsed?.hints ?? [],
+                                            errorText: text, response: response)
+            }
+        }
+    }
+
+    /// `EricMtHoleFehlerText` for `code`, or nil when ERiC has none.
+    private func errorText(_ code: Int32, api: CEricAPI, instance: EricInstanzHandle) -> String? {
+        guard let buffer = api.EricMtRueckgabepufferErzeugen(instance) else { return nil }
+        defer { _ = api.EricMtRueckgabepufferFreigeben(instance, buffer) }
+        guard api.EricMtHoleFehlerText(instance, code, buffer) == ERIC_OK.rawValue,
+              let content = api.EricMtRueckgabepufferInhalt(instance, buffer) else { return nil }
+        let text = String(cString: content).trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.isEmpty ? nil : text
+    }
+
     /// Frees the ERiC instance. Call on app quit; a later call creates a new instance.
     public func shutdown() {
         guard let instance, let api else { return }

@@ -32,6 +32,8 @@ int CEricLoad(const char *libraryPath, CEricAPI *api, char *error, size_t errorS
         { "EricMtRueckgabepufferInhalt", (void **)&loaded.EricMtRueckgabepufferInhalt },
         { "EricMtRueckgabepufferLaenge", (void **)&loaded.EricMtRueckgabepufferLaenge },
         { "EricMtVersion", (void **)&loaded.EricMtVersion },
+        { "EricMtBearbeiteVorgang", (void **)&loaded.EricMtBearbeiteVorgang },
+        { "EricMtHoleFehlerText", (void **)&loaded.EricMtHoleFehlerText },
     };
     for (size_t i = 0; i < sizeof(symbols) / sizeof(symbols[0]); i++) {
         void *symbol = dlsym(handle, symbols[i].name);
